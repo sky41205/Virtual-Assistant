@@ -3845,6 +3845,28 @@
           } catch {
           }
         }
+        if (!response) {
+          try {
+            const chatRes = await fetch("/api/chat", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                message: query,
+                lang: lang.mode
+              })
+            });
+            if (chatRes.ok) {
+              const chatData = await chatRes.json();
+              if (chatData.response && chatData.response.trim()) {
+                response = chatData.response.trim();
+                cardType = "ai_chat";
+                cardData = { provider: chatData.provider || "gemini", model: chatData.model || "gemini-3.8-flash" };
+              }
+            }
+          } catch (apiErr) {
+            console.warn("Serverless /api/chat error, falling back to local handlers:", apiErr);
+          }
+        }
         if (!response && (lower.includes("weather") || lower.includes("temperature") || lower.includes("mausam") || lower.includes("\u092E\u094C\u0938\u092E"))) {
           const cityMatch = query.match(/(?:in|for|at|of)\s+([a-zA-Z\u0900-\u097F]+)/i);
           const city = cityMatch ? cityMatch[1] : "Delhi";
@@ -3868,12 +3890,6 @@
           } else {
             response = `It is currently ${timeStr} on ${dateStr}.`;
           }
-        } else if (!response && (lower.includes("whatsapp") || lower.includes("call") || lower.includes("message") || lower.includes("bhejo"))) {
-          if (lang.mode === "hindi_devanagari" || lang.mode === "hinglish") {
-            response = "\u0935\u094D\u0939\u093E\u091F\u094D\u0938\u090F\u092A \u091A\u0948\u091F \u0924\u0948\u092F\u093E\u0930 \u0939\u0948\u0964 \u0921\u0947\u0938\u094D\u0915\u091F\u0949\u092A \u092A\u093E\u0907\u0925\u0928 \u0910\u092A \u092E\u0947\u0902 \u092F\u0939 \u092C\u093F\u0928\u093E \u0939\u093E\u0925 \u0932\u0917\u093E\u090F \u0921\u093E\u092F\u0930\u0947\u0915\u094D\u091F \u092D\u0947\u091C\u093E \u091C\u093E\u0924\u093E \u0939\u0948\u0964";
-          } else {
-            response = "WhatsApp command recognized. In desktop mode, Dracarys communicates directly hands-free via PyWhatKit.";
-          }
         } else if (!response && (lower.includes("who are you") || lower.includes("your name") || lower.includes("tum kaun ho") || lower.includes("aap kaun ho") || lower.includes("intro") || lower.includes("about you"))) {
           if (lang.mode === "hindi_devanagari" || lang.mode === "hinglish") {
             response = "\u092E\u0948\u0902 \u0921\u094D\u0930\u0947\u0915\u0947\u0930\u093F\u0938 (Dracarys AI) \u0939\u0942\u0901 \u2014 \u090F\u0915 \u0905\u0917\u0932\u0940 \u092A\u0940\u0922\u093C\u0940 \u0915\u093E \u0926\u094D\u0935\u093F\u092D\u093E\u0937\u0940 \u0921\u0947\u0938\u094D\u0915\u091F\u0949\u092A \u090F\u0906\u0908 \u0905\u0938\u093F\u0938\u094D\u091F\u0947\u0902\u091F\u0964 \u092E\u0948\u0902 \u0935\u0949\u092F\u0938 \u0915\u092E\u093E\u0902\u0921, \u0938\u093F\u0938\u094D\u091F\u092E \u0911\u091F\u094B\u092E\u0947\u0936\u0928 \u0914\u0930 \u0921\u0949\u0915\u094D\u092F\u0942\u092E\u0947\u0902\u091F \u090F\u0928\u093E\u0932\u093F\u0938\u093F\u0938 \u092E\u0947\u0902 \u0906\u092A\u0915\u0940 \u0938\u0939\u093E\u092F\u0924\u093E \u0915\u0930 \u0938\u0915\u0924\u093E \u0939\u0942\u0901\u0964";
@@ -3885,21 +3901,6 @@
             response = "\u0928\u092E\u0938\u094D\u0924\u0947! \u092E\u0948\u0902 \u0906\u092A\u0915\u0940 \u0915\u0948\u0938\u0947 \u0938\u0939\u093E\u092F\u0924\u093E \u0915\u0930 \u0938\u0915\u0924\u093E \u0939\u0942\u0901? \u0906\u092A \u092E\u0941\u091D\u0938\u0947 \u0915\u094B\u0908 \u092D\u0940 \u0938\u0935\u093E\u0932 \u092A\u0942\u091B \u0938\u0915\u0924\u0947 \u0939\u0948\u0902 \u092F\u093E \u0915\u094B\u0908 \u0915\u093E\u092E \u0915\u0930\u0928\u0947 \u0915\u094B \u0915\u0939 \u0938\u0915\u0924\u0947 \u0939\u0948\u0902\u0964";
           } else {
             response = "Hello! How can I assist you today? Feel free to ask any question or give me a task.";
-          }
-        } else if (!response && (lower.includes("joke") || lower.includes("chutkula") || lower.includes("funny"))) {
-          const jokesEn = [
-            "Why do programmers prefer dark mode? Because light attracts bugs!",
-            "Why did the JavaScript developer wear glasses? Because they didn't C#!",
-            "There are 10 types of people in the world: those who understand binary, and those who don't."
-          ];
-          const jokesHi = [
-            "\u091F\u0940\u091A\u0930: \u092C\u0924\u093E\u0913 \u092A\u093F\u091C\u094D\u091C\u093E \u0914\u0930 \u091C\u093F\u0902\u0926\u0917\u0940 \u092E\u0947\u0902 \u0915\u094D\u092F\u093E \u0938\u092E\u093E\u0928\u0924\u093E \u0939\u0948? \u091B\u093E\u0924\u094D\u0930: \u0926\u094B\u0928\u094B\u0902 \u092E\u0947\u0902 \u091A\u0940\u091C\u093C\u0940 (Cheesy) \u0939\u094B\u0928\u093E \u091C\u0930\u0942\u0930\u0940 \u0939\u0948!",
-            "\u092A\u094D\u0930\u094B\u0917\u094D\u0930\u093E\u092E\u0930: \u092D\u0917\u0935\u093E\u0928 \u092E\u0941\u091D\u0947 \u090F\u0915 \u0910\u0938\u0940 \u0932\u0921\u093C\u0915\u0940 \u091A\u093E\u0939\u093F\u090F \u091C\u094B \u0938\u0941\u0902\u0926\u0930 \u0939\u094B \u0914\u0930 \u0915\u092D\u0940 \u0915\u094D\u0930\u0948\u0936 \u0928 \u0939\u094B! \u092D\u0917\u0935\u093E\u0928: \u090F\u0930\u0930 404 - \u0928\u0949\u091F \u092B\u093E\u0909\u0902\u0921\u0964"
-          ];
-          if (lang.mode === "hindi_devanagari" || lang.mode === "hinglish") {
-            response = jokesHi[Math.floor(Math.random() * jokesHi.length)];
-          } else {
-            response = jokesEn[Math.floor(Math.random() * jokesEn.length)];
           }
         }
         if (!response) {
@@ -3921,19 +3922,18 @@
         }
         if (!response) {
           if (lang.mode === "hindi_devanagari" || lang.mode === "hinglish") {
-            response = `\u0906\u092A\u0915\u093E \u092A\u094D\u0930\u0936\u094D\u0928 "${query}" \u092A\u094D\u0930\u093E\u092A\u094D\u0924 \u0939\u0941\u0906\u0964 \u0921\u094D\u0930\u0947\u0915\u0947\u0930\u093F\u0938 \u090F\u0906\u0908 \u0911\u0928\u0932\u093E\u0907\u0928 \u0939\u0948\u0964 \u0906\u092A \u0938\u093F\u0938\u094D\u091F\u092E \u0911\u091F\u094B\u092E\u0947\u0936\u0928, \u092E\u094C\u0938\u092E, \u0917\u0923\u0928\u093E \u092F\u093E \u0935\u093F\u0915\u093F\u092A\u0940\u0921\u093F\u092F\u093E \u0915\u0940 \u091C\u093E\u0928\u0915\u093E\u0930\u0940 \u0924\u0941\u0930\u0902\u0924 \u092A\u094D\u0930\u093E\u092A\u094D\u0924 \u0915\u0930 \u0938\u0915\u0924\u0947 \u0939\u0948\u0902\u0964`;
+            response = `\u0906\u092A\u0915\u093E \u092A\u094D\u0930\u0936\u094D\u0928 "${query}" \u092A\u094D\u0930\u093E\u092A\u094D\u0924 \u0939\u0941\u0906\u0964 \u0921\u094D\u0930\u0947\u0915\u0947\u0930\u093F\u0938 \u090F\u0906\u0908 \u0911\u0928\u0932\u093E\u0907\u0928 \u0939\u0948 \u0914\u0930 \u0906\u092A\u0915\u0940 \u0938\u0939\u093E\u092F\u0924\u093E \u0915\u0947 \u0932\u093F\u090F \u0924\u0948\u092F\u093E\u0930 \u0939\u0948\u0964`;
           } else {
-            response = `Regarding "${query}": Dracarys AI is online. You can ask for factual information, math calculations, Wikipedia definitions, YouTube playback, weather forecasts, notes, or system control.`;
+            response = `Regarding "${query}": Dracarys AI is online and ready with full autonomous capabilities.`;
           }
         }
       } catch (err) {
         response = `I encountered a problem processing "${query}". Please try again or rephrase your request.`;
       }
       this.setMessageText(response);
-      this.displayActiveResponse(response, query, lang.mode);
+      this.displayActiveResponse(response, query, lang.mode, true);
       this.conversationManager.addAssistantMessage(response, cardType, cardData, "SUCCESS", true, lang.mode);
       this.historyManager.recordTask(query, response, source);
-      this.speechManager.speak(response, lang.mode);
     }
     updateLanguageBadge(text) {
       const pill = document.getElementById("detectedLangPill");

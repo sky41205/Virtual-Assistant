@@ -577,7 +577,32 @@ export class AssistantApp {
                     }
                 } catch {}
             }
-            // 4. Live Meteorological Weather
+
+            // 4. Serverless Gemini & OpenAI API Call via /api/chat
+            if (!response) {
+                try {
+                    const chatRes = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            message: query,
+                            lang: lang.mode
+                        })
+                    });
+                    if (chatRes.ok) {
+                        const chatData = await chatRes.json();
+                        if (chatData.response && chatData.response.trim()) {
+                            response = chatData.response.trim();
+                            cardType = "ai_chat";
+                            cardData = { provider: chatData.provider || "gemini", model: chatData.model || "gemini-3.8-flash" };
+                        }
+                    }
+                } catch (apiErr) {
+                    console.warn('Serverless /api/chat error, falling back to local handlers:', apiErr);
+                }
+            }
+
+            // 5. Live Meteorological Weather (Fallback)
             if (!response && (lower.includes("weather") || lower.includes("temperature") || lower.includes("mausam") || lower.includes("मौसम"))) {
                 const cityMatch = query.match(/(?:in|for|at|of)\s+([a-zA-Z\u0900-\u097F]+)/i);
                 const city = cityMatch ? cityMatch[1] : "Delhi";
@@ -593,7 +618,7 @@ export class AssistantApp {
                     response = `Weather in ${city}: 29°C, Sunny & Clear with 48% humidity.`;
                 }
             }
-            // 5. Time and Date Query
+            // 6. Time and Date Query (Fallback)
             else if (!response && (lower.includes("time") || lower.includes("samay") || lower.includes("समय") || lower.includes("date") || lower.includes("tarikh") || lower.includes("tareekh") || lower.includes("today"))) {
                 const now = new Date();
                 const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -604,15 +629,7 @@ export class AssistantApp {
                     response = `It is currently ${timeStr} on ${dateStr}.`;
                 }
             }
-            // 6. WhatsApp & Communication
-            else if (!response && (lower.includes("whatsapp") || lower.includes("call") || lower.includes("message") || lower.includes("bhejo"))) {
-                if (lang.mode === "hindi_devanagari" || lang.mode === "hinglish") {
-                    response = "व्हाट्सएप चैट तैयार है। डेस्कटॉप पाइथन ऐप में यह बिना हाथ लगाए डायरेक्ट भेजा जाता है।";
-                } else {
-                    response = "WhatsApp command recognized. In desktop mode, Dracarys communicates directly hands-free via PyWhatKit.";
-                }
-            }
-            // 7. Identity & Greetings
+            // 7. Identity & Greetings (Fallback)
             else if (!response && (lower.includes("who are you") || lower.includes("your name") || lower.includes("tum kaun ho") || lower.includes("aap kaun ho") || lower.includes("intro") || lower.includes("about you"))) {
                 if (lang.mode === "hindi_devanagari" || lang.mode === "hinglish") {
                     response = "मैं ड्रेकेरिस (Dracarys AI) हूँ — एक अगली पीढ़ी का द्विभाषी डेस्कटॉप एआई असिस्टेंट। मैं वॉयस कमांड, सिस्टम ऑटोमेशन और डॉक्यूमेंट एनालिसिस में आपकी सहायता कर सकता हूँ।";
@@ -627,24 +644,7 @@ export class AssistantApp {
                     response = "Hello! How can I assist you today? Feel free to ask any question or give me a task.";
                 }
             }
-            // 8. Jokes & Fun
-            else if (!response && (lower.includes("joke") || lower.includes("chutkula") || lower.includes("funny"))) {
-                const jokesEn = [
-                    "Why do programmers prefer dark mode? Because light attracts bugs!",
-                    "Why did the JavaScript developer wear glasses? Because they didn't C#!",
-                    "There are 10 types of people in the world: those who understand binary, and those who don't."
-                ];
-                const jokesHi = [
-                    "टीचर: बताओ पिज्जा और जिंदगी में क्या समानता है? छात्र: दोनों में चीज़ी (Cheesy) होना जरूरी है!",
-                    "प्रोग्रामर: भगवान मुझे एक ऐसी लड़की चाहिए जो सुंदर हो और कभी क्रैश न हो! भगवान: एरर 404 - नॉट फाउंड।"
-                ];
-                if (lang.mode === "hindi_devanagari" || lang.mode === "hinglish") {
-                    response = jokesHi[Math.floor(Math.random() * jokesHi.length)];
-                } else {
-                    response = jokesEn[Math.floor(Math.random() * jokesEn.length)];
-                }
-            }
-            // 9. Knowledge & Wikipedia Search for factual questions
+            // 8. Knowledge & Wikipedia Search (Fallback)
             if (!response) {
                 const topic = query
                     .replace(/^(who is|what is|where is|tell me about|explain|define|search for|about|kya hai|kaun hai)\s+/i, "")
@@ -666,12 +666,12 @@ export class AssistantApp {
                 }
             }
 
-            // 10. Intelligent Fallback Answer
+            // 9. Intelligent Default Answer (Fallback)
             if (!response) {
                 if (lang.mode === "hindi_devanagari" || lang.mode === "hinglish") {
-                    response = `आपका प्रश्न "${query}" प्राप्त हुआ। ड्रेकेरिस एआई ऑनलाइन है। आप सिस्टम ऑटोमेशन, मौसम, गणना या विकिपीडिया की जानकारी तुरंत प्राप्त कर सकते हैं।`;
+                    response = `आपका प्रश्न "${query}" प्राप्त हुआ। ड्रेकेरिस एआई ऑनलाइन है और आपकी सहायता के लिए तैयार है।`;
                 } else {
-                    response = `Regarding "${query}": Dracarys AI is online. You can ask for factual information, math calculations, Wikipedia definitions, YouTube playback, weather forecasts, notes, or system control.`;
+                    response = `Regarding "${query}": Dracarys AI is online and ready with full autonomous capabilities.`;
                 }
             }
         } catch (err) {
@@ -679,10 +679,9 @@ export class AssistantApp {
         }
 
         this.setMessageText(response);
-        this.displayActiveResponse(response, query, lang.mode);
+        this.displayActiveResponse(response, query, lang.mode, true);
         this.conversationManager.addAssistantMessage(response, cardType, cardData, "SUCCESS", true, lang.mode);
         this.historyManager.recordTask(query, response, source);
-        this.speechManager.speak(response, lang.mode);
     }
 
     public updateLanguageBadge(text: string): void {
