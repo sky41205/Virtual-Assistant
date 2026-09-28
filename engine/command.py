@@ -240,31 +240,38 @@ def speak(text, voice_index=None, rate=None, volume=None):
         lang_info = detect_language(text)
         is_hi = lang_info["mode"] in ("hindi_devanagari", "hinglish")
         from engine.config import TTS_HINDI_VOICE, TTS_ENGLISH_VOICE, VOICE_INDEX, VOICE_RATE, VOICE_VOLUME
-        selected_voice = (TTS_HINDI_VOICE or 'hi-IN-SwaraNeural') if is_hi else (TTS_ENGLISH_VOICE or 'en-IN-NeerjaNeural')
+        
+        primary_voice = (TTS_HINDI_VOICE or 'hi-IN-SwaraNeural') if is_hi else (TTS_ENGLISH_VOICE or 'en-IN-NeerjaNeural')
+        if is_hi:
+            secondary_voice = 'hi-IN-MadhurNeural' if primary_voice == 'hi-IN-SwaraNeural' else 'hi-IN-SwaraNeural'
+        else:
+            secondary_voice = 'en-IN-PrabhatNeural' if primary_voice == 'en-IN-NeerjaNeural' else 'en-US-JennyNeural'
 
         # Sanitize spoken text so emojis and markdown asterisks aren't read aloud
         spoken_text = sanitize_speech_text(text, is_hi)
         if not spoken_text:
             return
 
-        speech_rate = "-4%" if is_hi else "+0%"
+        speech_rate = "-2%" if is_hi else "+0%"
 
-        # Try high-fidelity Neural TTS
-        try:
-            audio_data = asyncio.run(_synthesize_edge_tts(spoken_text, selected_voice, rate=speech_rate))
-            # If preempted while synthesizing, abort
+        # Try high-fidelity Neural TTS with dual-voice fallback
+        for voice_candidate in [primary_voice, secondary_voice]:
             if gen != _speech_generation:
                 return
-            if audio_data:
-                _play_audio_bytes(audio_data, gen)
-                if gen == _speech_generation:
-                    try:
-                        eel.SetSpeakingState(False)
-                    except Exception:
-                        pass
-                return
-        except Exception as edge_err:
-            tts_logger.warning(f"Neural TTS fallback notice ({selected_voice}): {edge_err}")
+            try:
+                audio_data = asyncio.run(_synthesize_edge_tts(spoken_text, voice_candidate, rate=speech_rate))
+                if gen != _speech_generation:
+                    return
+                if audio_data:
+                    _play_audio_bytes(audio_data, gen)
+                    if gen == _speech_generation:
+                        try:
+                            eel.SetSpeakingState(False)
+                        except Exception:
+                            pass
+                    return
+            except Exception as edge_err:
+                tts_logger.warning(f"Neural TTS voice ({voice_candidate}) fallback notice: {edge_err}")
 
         # Fallback to local SAPI5 (pyttsx3)
         if gen != _speech_generation:

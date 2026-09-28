@@ -83,21 +83,31 @@ export class SpeechManager {
             const utterance = new SpeechSynthesisUtterance(spokenClean);
             const isHindi = (lang === "hi" || lang === "hi-IN" || lang === "hindi_devanagari" || lang === "hinglish");
             utterance.lang = isHindi ? "hi-IN" : "en-US";
-            utterance.rate = 1.05;
+            utterance.rate = isHindi ? 0.95 : 1.0;
             utterance.pitch = 1.0;
             utterance.volume = 1.0;
 
-            // Pick the best available voice
+            // Pick the best available voice with tiered priority
             if (this.voices.length === 0) {
                 this.voices = window.speechSynthesis.getVoices() || [];
             }
 
             if (this.voices.length > 0) {
                 if (isHindi) {
-                    const hiVoice = this.voices.find(v => v.lang.includes("hi") || v.name.toLowerCase().includes("hindi") || v.name.toLowerCase().includes("swara") || v.name.toLowerCase().includes("madhur") || v.name.toLowerCase().includes("india"));
+                    // Priority 1: High-fidelity Natural / Neural Hindi (Swara / Madhur)
+                    let hiVoice = this.voices.find(v => (v.lang.includes("hi") || v.name.toLowerCase().includes("hindi")) && (v.name.toLowerCase().includes("natural") || v.name.toLowerCase().includes("online") || v.name.toLowerCase().includes("swara") || v.name.toLowerCase().includes("madhur")));
+                    // Priority 2: Google हिन्दी
+                    if (!hiVoice) hiVoice = this.voices.find(v => v.lang.toLowerCase().startsWith("hi") || v.name.includes("हिन्दी") || v.name.toLowerCase().includes("hindi"));
+                    // Priority 3: Indian English voice as natural Hinglish fallback
+                    if (!hiVoice) hiVoice = this.voices.find(v => v.lang === "en-IN" || v.name.toLowerCase().includes("india"));
                     if (hiVoice) utterance.voice = hiVoice;
                 } else {
-                    const enVoice = this.voices.find(v => (v.lang === "en-IN" || v.lang === "en-US" || v.lang === "en-GB") && (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Neerja") || v.name.includes("Jenny") || v.name.includes("Samantha")));
+                    // Priority 1: Indian English Neural (Neerja / Prabhat)
+                    let enVoice = this.voices.find(v => (v.lang === "en-IN" || v.name.toLowerCase().includes("india")) && (v.name.toLowerCase().includes("natural") || v.name.toLowerCase().includes("online") || v.name.toLowerCase().includes("neerja")));
+                    // Priority 2: Google / US Natural
+                    if (!enVoice) enVoice = this.voices.find(v => (v.lang === "en-US" || v.lang === "en-GB" || v.lang === "en-IN") && (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Jenny")));
+                    // Priority 3: Any English
+                    if (!enVoice) enVoice = this.voices.find(v => v.lang.startsWith("en"));
                     if (enVoice) utterance.voice = enVoice;
                 }
             }

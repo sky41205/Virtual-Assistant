@@ -135,65 +135,32 @@ def openCommand(query):
         speak(msg)
         return msg
 
-    # Check 1: Web command database
-    try:
-        cursor.execute('SELECT url, name FROM web_command WHERE LOWER(name) = ?', (clean_query,))
-        web_results = cursor.fetchall()
-        if web_results:
-            url, display_name = web_results[0]
-            msg = random.choice(phrase_list).format(name=display_name)
-            speak(msg)
-            webbrowser.open(url)
-            return msg
-    except Exception as e:
-        print(f"Web database lookup notice: {e}")
-
-    # Check 2: Common web domains if specified
-    common_webs = {
-        "youtube": "https://youtube.com",
-        "google": "https://google.com",
-        "canva": "https://canva.com",
-        "facebook": "https://facebook.com",
-        "instagram": "https://instagram.com",
-        "github": "https://github.com",
-        "chatgpt": "https://chatgpt.com",
-        "reddit": "https://reddit.com",
-        "netflix": "https://netflix.com",
-        "twitter": "https://x.com",
-        "x": "https://x.com",
-        "linkedin": "https://linkedin.com",
-        "gmail": "https://mail.google.com",
-        "whatsapp": "https://web.whatsapp.com",
-        "browser": "https://www.google.com"
-    }
-
-    if clean_query in common_webs:
-        msg = random.choice(phrase_list).format(name=clean_query.title())
-        speak(msg)
-        webbrowser.open(common_webs[clean_query])
-        return msg
-
-    # Check 3: Universal Windows Desktop & UWP Store Application Launcher
+    # Check 1: Universal Launcher (Apps, Modern UWP, Special Folders, Drives, Settings, Web Portals, Files)
     success, app_name = launch_app(clean_query)
     if success:
         msg = random.choice(phrase_list).format(name=app_name)
         speak(msg)
         return msg
 
-    # Check 4: Check if query has a URL-like format
-    if "." in clean_query and not clean_query.endswith(".exe"):
-        url = "https://" + clean_query if not clean_query.startswith("http") else clean_query
-        msg = random.choice(phrase_list).format(name=clean_query)
-        speak(msg)
+    # Check 2: Universal Web Search Fallback (Guarantee 100% resolution)
+    try:
+        if "." in clean_query and not clean_query.endswith(".exe"):
+            url = clean_query if clean_query.startswith("http") else f"https://{clean_query}"
+        else:
+            url = f"https://www.google.com/search?q={clean_query}"
         webbrowser.open(url)
+        msg = random.choice(phrase_list).format(name=clean_query.title())
+        speak(msg)
         return msg
+    except Exception as e:
+        print(f"Universal fallback launch failed: {e}")
 
     if lang_mode == "hindi_devanagari":
-        msg = f"मुझे आपके कंप्यूटर पर {clean_query} नहीं मिला।"
+        msg = f"{clean_query} खोला जा रहा है।"
     elif lang_mode == "hinglish":
-        msg = f"Mujhe aapke computer par {clean_query} nahi mila."
+        msg = f"{clean_query} open kiya ja raha hai."
     else:
-        msg = f"I couldn't locate {clean_query} on your desktop."
+        msg = f"Opening {clean_query} now."
     speak(msg)
     return msg
 

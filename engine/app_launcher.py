@@ -16,7 +16,7 @@ _cache_lock = threading.RLock()
 
 user_home = os.environ.get('USERPROFILE', '')
 
-# Comprehensive Built-in Windows system tools, special folders, drives, settings, and protocol URI handlers
+# Comprehensive Built-in Windows system tools, special folders, drives, settings, web services, and protocol URI handlers
 BUILTIN_APPS = {
     # Special Folders
     "downloads": (os.path.join(user_home, "Downloads"), "folder", "Downloads"),
@@ -34,12 +34,6 @@ BUILTIN_APPS = {
     "my music": (os.path.join(user_home, "Music"), "folder", "Music"),
     "recycle bin": ("shell:RecycleBinFolder", "uri", "Recycle Bin"),
     "trash": ("shell:RecycleBinFolder", "uri", "Recycle Bin"),
-
-    # Web & Browser
-    "browser": ("https://www.google.com", "url", "Browser"),
-    "web browser": ("https://www.google.com", "url", "Browser"),
-    "internet": ("https://www.google.com", "url", "Browser"),
-    "google": ("https://www.google.com", "url", "Google"),
 
     # Drives
     "c drive": ("C:\\", "folder", "C: Drive"),
@@ -118,6 +112,106 @@ BUILTIN_APPS = {
     "photos": ("ms-photos:", "uri", "Photos"),
     "voice recorder": ("ms-soundrecorder:", "uri", "Voice Recorder"),
     "sticky notes": ("shell:AppsFolder\\Microsoft.MicrosoftStickyNotes_8wekyb3d8bbwe!App", "appx", "Sticky Notes"),
+
+    # AI & LLM Portals
+    "chatgpt": ("https://chatgpt.com", "url", "ChatGPT"),
+    "chat gpt": ("https://chatgpt.com", "url", "ChatGPT"),
+    "openai": ("https://chatgpt.com", "url", "ChatGPT"),
+    "claude": ("https://claude.ai", "url", "Claude AI"),
+    "claude ai": ("https://claude.ai", "url", "Claude AI"),
+    "gemini": ("https://gemini.google.com", "url", "Google Gemini"),
+    "google gemini": ("https://gemini.google.com", "url", "Google Gemini"),
+    "perplexity": ("https://www.perplexity.ai", "url", "Perplexity AI"),
+    "copilot": ("https://copilot.microsoft.com", "url", "Microsoft Copilot"),
+    "deepseek": ("https://chat.deepseek.com", "url", "DeepSeek"),
+    "poe": ("https://poe.com", "url", "Poe"),
+    "huggingface": ("https://huggingface.co", "url", "Hugging Face"),
+    "hugging face": ("https://huggingface.co", "url", "Hugging Face"),
+
+    # Coding & Development Portals
+    "github": ("https://github.com", "url", "GitHub"),
+    "gitlab": ("https://gitlab.com", "url", "GitLab"),
+    "leetcode": ("https://leetcode.com", "url", "LeetCode"),
+    "leet code": ("https://leetcode.com", "url", "LeetCode"),
+    "geeksforgeeks": ("https://www.geeksforgeeks.org", "url", "GeeksforGeeks"),
+    "gfg": ("https://www.geeksforgeeks.org", "url", "GeeksforGeeks"),
+    "hackerrank": ("https://www.hackerrank.com", "url", "HackerRank"),
+    "codechef": ("https://www.codechef.com", "url", "CodeChef"),
+    "codeforces": ("https://codeforces.com", "url", "Codeforces"),
+    "stackoverflow": ("https://stackoverflow.com", "url", "Stack Overflow"),
+    "stack overflow": ("https://stackoverflow.com", "url", "Stack Overflow"),
+    "w3schools": ("https://www.w3schools.com", "url", "W3Schools"),
+    "mdn": ("https://developer.mozilla.org", "url", "MDN Web Docs"),
+    "kaggle": ("https://www.kaggle.com", "url", "Kaggle"),
+    "replit": ("https://replit.com", "url", "Replit"),
+    "vercel": ("https://vercel.com", "url", "Vercel"),
+    "netlify": ("https://www.netlify.com", "url", "Netlify"),
+    "npm": ("https://www.npmjs.com", "url", "npm"),
+
+    # Streaming & Entertainment Portals
+    "youtube": ("https://www.youtube.com", "url", "YouTube"),
+    "netflix": ("https://www.netflix.com", "url", "Netflix"),
+    "prime video": ("https://www.primevideo.com", "url", "Amazon Prime Video"),
+    "amazon prime": ("https://www.primevideo.com", "url", "Amazon Prime Video"),
+    "hotstar": ("https://www.hotstar.com", "url", "Disney+ Hotstar"),
+    "disney hotstar": ("https://www.hotstar.com", "url", "Disney+ Hotstar"),
+    "disney+ hotstar": ("https://www.hotstar.com", "url", "Disney+ Hotstar"),
+    "jiocinema": ("https://www.jiocinema.com", "url", "JioCinema"),
+    "jio cinema": ("https://www.jiocinema.com", "url", "JioCinema"),
+    "sonyliv": ("https://www.sonyliv.com", "url", "SonyLIV"),
+    "sony liv": ("https://www.sonyliv.com", "url", "SonyLIV"),
+    "zee5": ("https://www.zee5.com", "url", "ZEE5"),
+    "twitch": ("https://www.twitch.tv", "url", "Twitch"),
+    "crunchyroll": ("https://www.crunchyroll.com", "url", "Crunchyroll"),
+    "imdb": ("https://www.imdb.com", "url", "IMDb"),
+
+    # Social & Communication Portals
+    "instagram": ("https://www.instagram.com", "url", "Instagram"),
+    "insta": ("https://www.instagram.com", "url", "Instagram"),
+    "facebook": ("https://www.facebook.com", "url", "Facebook"),
+    "fb": ("https://www.facebook.com", "url", "Facebook"),
+    "twitter": ("https://x.com", "url", "X (Twitter)"),
+    "x": ("https://x.com", "url", "X (Twitter)"),
+    "linkedin": ("https://www.linkedin.com", "url", "LinkedIn"),
+    "reddit": ("https://www.reddit.com", "url", "Reddit"),
+    "pinterest": ("https://www.pinterest.com", "url", "Pinterest"),
+    "threads": ("https://www.threads.net", "url", "Threads"),
+    "snapchat": ("https://web.snapchat.com", "url", "Snapchat"),
+
+    # Google Workspace & Cloud Utilities
+    "browser": ("https://www.google.com", "url", "Google"),
+    "web browser": ("https://www.google.com", "url", "Google"),
+    "internet": ("https://www.google.com", "url", "Google"),
+    "google": ("https://www.google.com", "url", "Google"),
+    "gmail": ("https://mail.google.com", "url", "Gmail"),
+    "mail": ("https://mail.google.com", "url", "Gmail"),
+    "google mail": ("https://mail.google.com", "url", "Gmail"),
+    "google drive": ("https://drive.google.com", "url", "Google Drive"),
+    "drive": ("https://drive.google.com", "url", "Google Drive"),
+    "google docs": ("https://docs.google.com", "url", "Google Docs"),
+    "docs": ("https://docs.google.com", "url", "Google Docs"),
+    "google sheets": ("https://sheets.google.com", "url", "Google Sheets"),
+    "sheets": ("https://sheets.google.com", "url", "Google Sheets"),
+    "google slides": ("https://slides.google.com", "url", "Google Slides"),
+    "slides": ("https://slides.google.com", "url", "Google Slides"),
+    "google photos": ("https://photos.google.com", "url", "Google Photos"),
+    "google maps": ("https://maps.google.com", "url", "Google Maps"),
+    "maps": ("https://maps.google.com", "url", "Google Maps"),
+    "google translate": ("https://translate.google.com", "url", "Google Translate"),
+    "translate": ("https://translate.google.com", "url", "Google Translate"),
+    "wikipedia": ("https://www.wikipedia.org", "url", "Wikipedia"),
+    "wiki": ("https://www.wikipedia.org", "url", "Wikipedia"),
+
+    # Productivity, Design & Shopping
+    "canva": ("https://www.canva.com", "url", "Canva"),
+    "notion": ("https://www.notion.so", "url", "Notion"),
+    "figma web": ("https://www.figma.com", "url", "Figma Web"),
+    "amazon": ("https://www.amazon.in", "url", "Amazon"),
+    "flipkart": ("https://www.flipkart.com", "url", "Flipkart"),
+    "myntra": ("https://www.myntra.com", "url", "Myntra"),
+    "swiggy": ("https://www.swiggy.com", "url", "Swiggy"),
+    "zomato": ("https://www.zomato.com", "url", "Zomato"),
+    "speedtest": ("https://www.speedtest.net", "url", "Speedtest"),
 
     # Common Productivity & Development Aliases
     "word": ("winword.exe", "alias", "Microsoft Word"),
@@ -320,7 +414,7 @@ def initialize_app_index_async():
     t.start()
 
 def clean_app_query(query: str) -> str:
-    """Normalize and clean user voice/text query for app name extraction."""
+    """Normalize and clean user voice/text query for app/file/url name extraction."""
     q = query.lower().strip()
     
     # Strip common command prefixes in English and Hindi/Hinglish
@@ -328,7 +422,8 @@ def clean_app_query(query: str) -> str:
         "can you please open the ", "can you please open ", "can you open the ", "can you open ",
         "please open the ", "please open ", "open the ", "launch the ", "start the ", "run the ",
         "pull up the ", "open up the ", "open ", "launch ", "start ", "run ", "pull up ", "kholo ", "chalao ",
-        "खोलो ", "चलाओ ", "खोलें "
+        "khol do ", "chala do ", "kholiye ", "shuru karo ", "start karo ",
+        "खोलो ", "चलाओ ", "खोलें ", "शुरू करो ", "शुरू करें ", "खोल दो ", "चला दो "
     ]
     for p in prefixes:
         if q.startswith(p):
@@ -337,8 +432,9 @@ def clean_app_query(query: str) -> str:
 
     # Strip common postfixes
     postfixes = [
-        " open karo", " start karo", " shuru karo", " chala do", " khol do", " kholo", " chalao",
-        " खोलो", " चलाओ", " खोलें", " शुरू करो", " app", " application", " please", " now"
+        " open karo", " start karo", " shuru karo", " chala do", " khol do", " kholo", " chalao", " kholiye",
+        " खोलो", " चलाओ", " खोलें", " शुरू करो", " शुरू करें", " खोल दो", " चला दो",
+        " website", " site", " portal", " app", " application", " please", " now"
     ]
     for p in postfixes:
         if q.endswith(p):
@@ -348,8 +444,48 @@ def clean_app_query(query: str) -> str:
     q = re.sub(r'[?!.,;:]', '', q).strip()
     return q
 
+def _search_user_files(query: str):
+    """Deep search user folders (Desktop, Documents, Downloads, Pictures, Videos) for files or subfolders."""
+    if not query or len(query) < 2:
+        return None
+    user_home = os.environ.get('USERPROFILE', '')
+    search_dirs = [
+        os.path.join(user_home, "Desktop"),
+        os.path.join(user_home, "Documents"),
+        os.path.join(user_home, "Downloads"),
+        os.path.join(user_home, "Pictures"),
+        os.path.join(user_home, "Videos"),
+        os.path.join(user_home, "OneDrive"),
+    ]
+    
+    q_clean = query.lower().strip()
+    
+    for base_dir in search_dirs:
+        if not os.path.exists(base_dir):
+            continue
+        try:
+            for root, dirs, files in os.walk(base_dir):
+                # Search matching directory
+                for d in dirs:
+                    if d.lower() == q_clean or q_clean == os.path.splitext(d.lower())[0]:
+                        full_p = os.path.join(root, d)
+                        return (full_p, "folder", d)
+                # Search matching file
+                for f in files:
+                    base_f = os.path.splitext(f.lower())[0]
+                    if f.lower() == q_clean or base_f == q_clean:
+                        full_p = os.path.join(root, f)
+                        return (full_p, "file", f)
+                # Depth limit of 3 to stay fast
+                rel_depth = len(Path(root).relative_to(Path(base_dir)).parts)
+                if rel_depth >= 3:
+                    dirs.clear()
+        except Exception:
+            pass
+    return None
+
 def find_app(query: str):
-    """Find the best matching application, file, folder, drive, or system tool."""
+    """Find the best matching application, file, folder, drive, web portal, or system tool."""
     global _cache_initialized, _app_cache
     if not _cache_initialized:
         index_desktop_apps()
@@ -373,7 +509,7 @@ def find_app(query: str):
         kind = "folder" if os.path.isdir(q) else "file"
         return (os.path.abspath(q), kind, display)
 
-    # Check 3: Check User Folders / Documents
+    # Check 3: Check User Documents Analyzer
     try:
         from engine.document_analyzer import resolve_document_path
         doc_path = resolve_document_path(q)
@@ -388,7 +524,12 @@ def find_app(query: str):
     if q in _app_cache:
         return _app_cache[q]
 
-    # Check 5: Simplified alphanumeric match (e.g. "vs code" -> "vscode")
+    # Check 5: Deep search in User Files & Folders
+    user_file_match = _search_user_files(q)
+    if user_file_match:
+        return user_file_match
+
+    # Check 6: Simplified alphanumeric match (e.g. "vs code" -> "vscode")
     q_simple = re.sub(r'[^a-zA-Z0-9]', '', q)
     if q_simple:
         for key, val in _app_cache.items():
@@ -396,8 +537,7 @@ def find_app(query: str):
             if q_simple == key_simple:
                 return val
 
-    # Check 6: Substring match (e.g. "bluestacks" in "bluestacks 5", "word" in "microsoft word")
-    # Prefer starts-with matches first
+    # Check 7: Substring match
     for key, val in _app_cache.items():
         if key.startswith(q) or q.startswith(key):
             return val
@@ -406,7 +546,7 @@ def find_app(query: str):
         if q in key or key in q:
             return val
 
-    # Check 7: Word-boundary / Token matching
+    # Check 8: Word-boundary / Token matching
     q_words = [w for w in q.split() if len(w) >= 3]
     if q_words:
         for word in q_words:
@@ -414,36 +554,53 @@ def find_app(query: str):
                 if word in key.split():
                     return val
 
-    # Check 8: Fuzzy matching with difflib
+    # Check 9: Fuzzy matching with difflib
     candidates = list(_app_cache.keys())
     matches = difflib.get_close_matches(q, candidates, n=1, cutoff=0.55)
     if matches:
         return _app_cache[matches[0]]
 
+    # Check 10: URL or Web Domain resolution (e.g., "example.com", "subdomain.org", "http://...")
+    domain_match = re.search(r'^[a-zA-Z0-9\-]+\.(com|org|net|in|io|ai|co|app|gov|edu|tech|dev|me|info)$', q)
+    if domain_match or q.startswith("http://") or q.startswith("https://") or ("." in q and not q.endswith(".exe")):
+        url = q if q.startswith("http") else f"https://{q}"
+        return (url, "url", q)
+
     return None
 
 def launch_app(query: str) -> tuple[bool, str]:
-    """Search and launch any application, file, folder, drive, modern store app, or tool."""
+    """Search and launch any application, file, folder, drive, modern store app, website, or tool."""
     match = find_app(query)
     clean_name = clean_app_query(query)
 
     if not match:
-        # Last-resort fallback: execute via Windows Shell 'start'
         if not clean_name:
             return False, query
+        # Universal web/search fallback: launch directly in default browser or Windows shell
         try:
-            subprocess.Popen(f'start "" "{clean_name}"', shell=True)
-            return True, clean_name.title()
+            # Check if likely a website name (e.g., "netflix", "flipkart", "amazon")
+            if " " not in clean_name and len(clean_name) >= 3:
+                url = f"https://www.{clean_name}.com"
+                webbrowser.open(url)
+                return True, clean_name.title()
+            else:
+                # Open Google search for the query
+                url = f"https://www.google.com/search?q={clean_name}"
+                webbrowser.open(url)
+                return True, clean_name.title()
         except Exception as e:
-            print(f"Fallback launch failed for {clean_name}: {e}")
-            return False, clean_name
+            print(f"Fallback web launch failed for {clean_name}: {e}")
+            try:
+                subprocess.Popen(f'start "" "{clean_name}"', shell=True)
+                return True, clean_name.title()
+            except Exception as e2:
+                print(f"Shell start failed: {e2}")
+                return False, clean_name
 
     target, kind, display_name = match
 
     try:
         if kind == "appx":
-            # Modern UWP / Windows Store App or Shell AppsFolder entry
-            # E.g. shell:AppsFolder\Microsoft.WindowsCalculator_8wekyb3d8bbwe!App
             appx_path = target if target.startswith("shell:") else f"shell:AppsFolder\\{target}"
             subprocess.Popen(f'explorer.exe "{appx_path}"', shell=True)
             return True, display_name
@@ -457,15 +614,10 @@ def launch_app(query: str) -> tuple[bool, str]:
                 from engine.communication import open_whatsapp
                 success, _ = open_whatsapp()
                 return success, display_name
-            # E.g. ms-settings:, spotify:, bingweather:
             subprocess.Popen(f'start "" "{target}"', shell=True)
             return True, display_name
 
-        elif kind in ["lnk", "file"]:
-            os.startfile(target)
-            return True, display_name
-
-        elif kind == "folder":
+        elif kind in ["lnk", "file", "folder"]:
             os.startfile(target)
             return True, display_name
 
@@ -475,7 +627,6 @@ def launch_app(query: str) -> tuple[bool, str]:
             elif target.endswith(('.msc', '.cpl')):
                 subprocess.Popen(f'start "" "{target}"', shell=True)
             else:
-                # System binary on PATH (calc.exe, notepad.exe, wt.exe, etc.)
                 subprocess.Popen(target, shell=True)
             return True, display_name
 
@@ -486,12 +637,16 @@ def launch_app(query: str) -> tuple[bool, str]:
     except Exception as e:
         print(f"Primary launch failed for {display_name} ({target}): {e}. Attempting universal fallback.")
         try:
-            # Universal Windows start fallback
             subprocess.Popen(f'start "" "{target}"', shell=True)
             return True, display_name
         except Exception as e2:
             print(f"Secondary launch failed: {e2}")
-            return False, display_name
+            # Try web browser fallback
+            try:
+                webbrowser.open(f"https://www.google.com/search?q={clean_name}")
+                return True, display_name
+            except Exception:
+                return False, display_name
 
 # Start async indexing when module is imported
 initialize_app_index_async()

@@ -558,14 +558,141 @@ export class AssistantApp {
                 response = "🔥 DRACARYS ACTIVATED! All 15 neural skill engines running at peak performance. WebGL particle fire ignited!";
                 this.dragonBackground?.triggerFireBreath(3.0);
             }
-            // 2. YouTube & Music Playback
-            else if (lower.includes("youtube") || lower.startsWith("play ") || lower.includes("song") || lower.includes("video")) {
-                const search = query.replace(/open\s+youtube|play|on\s+youtube|search\s+for|search/gi, "").trim();
-                const ytQuery = search || "Hans Zimmer Interstellar";
-                response = `Opening YouTube for "${ytQuery}"...`;
-                window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(ytQuery)}`, "_blank");
+            // 2. Universal Web & Application Opener (Web, Portals, Search, Tools)
+            else if (
+                lower.startsWith("open ") || lower.startsWith("launch ") || lower.startsWith("start ") ||
+                lower.startsWith("kholo ") || lower.startsWith("chalao ") || lower.startsWith("खोलो ") ||
+                lower.startsWith("चलाओ ") || lower.startsWith("खोलें ") ||
+                lower.endsWith(" kholo") || lower.endsWith(" chalao") || lower.endsWith(" open karo") ||
+                lower.endsWith(" start karo") || lower.endsWith(" खोलो") || lower.endsWith(" चलाओ")
+            ) {
+                let target = lower
+                    .replace(/^(can you please open|please open|open up|open the|launch the|start the|open|launch|start|kholo|chalao|खोलो|चलाओ|खोलें)\s+/gi, "")
+                    .replace(/\s+(open karo|start karo|kholo|chalao|खोलो|चलाओ|खोलें|app|application|website|site|portal|please|now)$/gi, "")
+                    .trim();
+
+                const WEB_PORTALS: Record<string, { url: string; name: string }> = {
+                    chatgpt: { url: "https://chatgpt.com", name: "ChatGPT" },
+                    "chat gpt": { url: "https://chatgpt.com", name: "ChatGPT" },
+                    openai: { url: "https://chatgpt.com", name: "ChatGPT" },
+                    claude: { url: "https://claude.ai", name: "Claude AI" },
+                    gemini: { url: "https://gemini.google.com", name: "Google Gemini" },
+                    perplexity: { url: "https://www.perplexity.ai", name: "Perplexity AI" },
+                    copilot: { url: "https://copilot.microsoft.com", name: "Microsoft Copilot" },
+                    deepseek: { url: "https://chat.deepseek.com", name: "DeepSeek" },
+                    poe: { url: "https://poe.com", name: "Poe" },
+                    huggingface: { url: "https://huggingface.co", name: "Hugging Face" },
+                    github: { url: "https://github.com", name: "GitHub" },
+                    gitlab: { url: "https://gitlab.com", name: "GitLab" },
+                    leetcode: { url: "https://leetcode.com", name: "LeetCode" },
+                    "leet code": { url: "https://leetcode.com", name: "LeetCode" },
+                    geeksforgeeks: { url: "https://www.geeksforgeeks.org", name: "GeeksforGeeks" },
+                    gfg: { url: "https://www.geeksforgeeks.org", name: "GeeksforGeeks" },
+                    hackerrank: { url: "https://www.hackerrank.com", name: "HackerRank" },
+                    codechef: { url: "https://www.codechef.com", name: "CodeChef" },
+                    codeforces: { url: "https://codeforces.com", name: "Codeforces" },
+                    stackoverflow: { url: "https://stackoverflow.com", name: "Stack Overflow" },
+                    "stack overflow": { url: "https://stackoverflow.com", name: "Stack Overflow" },
+                    w3schools: { url: "https://www.w3schools.com", name: "W3Schools" },
+                    mdn: { url: "https://developer.mozilla.org", name: "MDN Web Docs" },
+                    kaggle: { url: "https://www.kaggle.com", name: "Kaggle" },
+                    replit: { url: "https://replit.com", name: "Replit" },
+                    vercel: { url: "https://vercel.com", name: "Vercel" },
+                    netlify: { url: "https://www.netlify.com", name: "Netlify" },
+                    npm: { url: "https://www.npmjs.com", name: "npm" },
+                    youtube: { url: "https://www.youtube.com", name: "YouTube" },
+                    netflix: { url: "https://www.netflix.com", name: "Netflix" },
+                    "prime video": { url: "https://www.primevideo.com", name: "Amazon Prime Video" },
+                    "amazon prime": { url: "https://www.primevideo.com", name: "Amazon Prime Video" },
+                    hotstar: { url: "https://www.hotstar.com", name: "Disney+ Hotstar" },
+                    jiocinema: { url: "https://www.jiocinema.com", name: "JioCinema" },
+                    sonyliv: { url: "https://www.sonyliv.com", name: "SonyLIV" },
+                    zee5: { url: "https://www.zee5.com", name: "ZEE5" },
+                    twitch: { url: "https://www.twitch.tv", name: "Twitch" },
+                    crunchyroll: { url: "https://www.crunchyroll.com", name: "Crunchyroll" },
+                    spotify: { url: "https://open.spotify.com", name: "Spotify" },
+                    instagram: { url: "https://www.instagram.com", name: "Instagram" },
+                    insta: { url: "https://www.instagram.com", name: "Instagram" },
+                    facebook: { url: "https://www.facebook.com", name: "Facebook" },
+                    twitter: { url: "https://x.com", name: "X (Twitter)" },
+                    x: { url: "https://x.com", name: "X (Twitter)" },
+                    linkedin: { url: "https://www.linkedin.com", name: "LinkedIn" },
+                    reddit: { url: "https://www.reddit.com", name: "Reddit" },
+                    whatsapp: { url: "https://web.whatsapp.com", name: "WhatsApp Web" },
+                    telegram: { url: "https://web.telegram.org", name: "Telegram Web" },
+                    discord: { url: "https://discord.com/app", name: "Discord" },
+                    pinterest: { url: "https://www.pinterest.com", name: "Pinterest" },
+                    google: { url: "https://www.google.com", name: "Google" },
+                    browser: { url: "https://www.google.com", name: "Browser" },
+                    gmail: { url: "https://mail.google.com", name: "Gmail" },
+                    "google drive": { url: "https://drive.google.com", name: "Google Drive" },
+                    drive: { url: "https://drive.google.com", name: "Google Drive" },
+                    "google docs": { url: "https://docs.google.com", name: "Google Docs" },
+                    docs: { url: "https://docs.google.com", name: "Google Docs" },
+                    "google sheets": { url: "https://sheets.google.com", name: "Google Sheets" },
+                    sheets: { url: "https://sheets.google.com", name: "Google Sheets" },
+                    "google maps": { url: "https://maps.google.com", name: "Google Maps" },
+                    maps: { url: "https://maps.google.com", name: "Google Maps" },
+                    "google translate": { url: "https://translate.google.com", name: "Google Translate" },
+                    translate: { url: "https://translate.google.com", name: "Google Translate" },
+                    wikipedia: { url: "https://www.wikipedia.org", name: "Wikipedia" },
+                    canva: { url: "https://www.canva.com", name: "Canva" },
+                    notion: { url: "https://www.notion.so", name: "Notion" },
+                    figma: { url: "https://www.figma.com", name: "Figma" },
+                    amazon: { url: "https://www.amazon.in", name: "Amazon" },
+                    flipkart: { url: "https://www.flipkart.com", name: "Flipkart" },
+                    myntra: { url: "https://www.myntra.com", name: "Myntra" },
+                    swiggy: { url: "https://www.swiggy.com", name: "Swiggy" },
+                    zomato: { url: "https://www.zomato.com", name: "Zomato" },
+                    speedtest: { url: "https://www.speedtest.net", name: "Speedtest" },
+                    calculator: { url: "https://www.google.com/search?q=calculator", name: "Calculator" },
+                    calc: { url: "https://www.google.com/search?q=calculator", name: "Calculator" },
+                    weather: { url: "https://www.google.com/search?q=weather+today", name: "Weather" },
+                };
+
+                let targetUrl = "";
+                let targetDisplayName = "";
+
+                if (WEB_PORTALS[target]) {
+                    targetUrl = WEB_PORTALS[target].url;
+                    targetDisplayName = WEB_PORTALS[target].name;
+                } else if (/\.(com|org|net|in|io|ai|co|app|gov|edu|tech|dev)$/i.test(target)) {
+                    targetUrl = target.startsWith("http") ? target : `https://${target}`;
+                    targetDisplayName = target;
+                } else if (target) {
+                    targetUrl = `https://www.google.com/search?q=${encodeURIComponent(target)}`;
+                    targetDisplayName = target.charAt(0).toUpperCase() + target.slice(1);
+                }
+
+                if (targetUrl) {
+                    window.open(targetUrl, "_blank");
+                    if (lang.mode === "hindi_devanagari") {
+                        response = `बिल्कुल! ${targetDisplayName} खोला जा रहा है।`;
+                    } else if (lang.mode === "hinglish") {
+                        response = `Zaroor! ${targetDisplayName} open kiya ja raha hai.`;
+                    } else {
+                        response = `Right away! Opening ${targetDisplayName} for you.`;
+                    }
+                    cardType = "action_result";
+                    cardData = { action: "open", target: targetDisplayName, url: targetUrl };
+                }
             }
-            // 3. Calculator / Math Expression Evaluation
+            // 3. YouTube & Music Playback
+            else if (lower.includes("youtube") || lower.startsWith("play ") || lower.includes("song") || lower.includes("video") || lower.includes("bajao") || lower.includes("बजाओ")) {
+                const search = query.replace(/open\s+youtube|play|on\s+youtube|search\s+for|search|bajao|बजाओ/gi, "").trim();
+                const ytQuery = search || "Hans Zimmer Interstellar";
+                if (lang.mode === "hindi_devanagari") {
+                    response = `YouTube पर "${ytQuery}" चलाया जा रहा है...`;
+                } else if (lang.mode === "hinglish") {
+                    response = `YouTube par "${ytQuery}" play kiya ja raha hai...`;
+                } else {
+                    response = `Opening YouTube for "${ytQuery}"...`;
+                }
+                window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(ytQuery)}`, "_blank");
+                cardType = "media";
+                cardData = { action: "youtube", query: ytQuery };
+            }
+            // 4. Calculator / Math Expression Evaluation
             else if (/[\d\+\-\*\/\^\(\)\%\=]/.test(query) && (lower.includes("calculate") || lower.includes("what is") || lower.includes("solve") || /^[\d\s\+\-\*\/\(\)\.\%]+$/.test(query))) {
                 try {
                     const mathExpr = query.replace(/[^0-9+\-*/().%^]/g, "").replace(/\^/g, "**").replace(/%/g, "*0.01");
