@@ -22,8 +22,26 @@ export class SpeechManager {
         return this.isSpeaking;
     }
 
+    public speak(text: string, lang: string = "en-US"): void {
+        if (!text || !text.trim()) return;
+        if ("speechSynthesis" in window) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = (lang === "hi" || lang === "hi-IN" || lang === "hindi_devanagari" || lang === "hinglish") ? "hi-IN" : "en-US";
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            utterance.onstart = () => this.setSpeaking(true);
+            utterance.onend = () => this.setSpeaking(false);
+            utterance.onerror = () => this.setSpeaking(false);
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
     public stopSpeech(): void {
         this.isSpeaking = false;
+        if ("speechSynthesis" in window) {
+            window.speechSynthesis.cancel();
+        }
         if (window.eel && window.eel.stopSpeechOutput) {
             try {
                 window.eel.stopSpeechOutput();
