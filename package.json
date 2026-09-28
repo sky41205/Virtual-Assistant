@@ -4,7 +4,7 @@
   "description": "Dracarys AI Virtual Assistant — Modular TypeScript & Python Eel Architecture",
   "scripts": {
     "typecheck": "npx --yes typescript --noEmit",
-    "build": "npx --yes esbuild src/ts/app.ts --bundle --outfile=www/dist/app.bundle.js",
+    "build": "npx --yes esbuild src/ts/app.ts --bundle --minify --outfile=www/dist/app.bundle.js",
     "watch": "npx --yes esbuild src/ts/app.ts --bundle --outfile=www/dist/app.bundle.js --watch"
   },
   "devDependencies": {

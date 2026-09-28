@@ -784,20 +784,6 @@ def takeCommand():
 
     speech_logger.info(f"Initializing speech recognition cycle (primary_lang={primary_lang})...")
 
-    # Guard: check if any microphone is detected
-    try:
-        mics = sr.Microphone.list_microphone_names()
-        if not mics:
-            speech_logger.warning("No microphone hardware found on system.")
-            try:
-                eel.SetListeningState(False)
-                eel.ShowErrorNotification("No Microphone Found", "No audio input hardware was detected. Please connect a microphone or use text input.", "mic")
-            except Exception:
-                pass
-            return ""
-    except Exception as e:
-        speech_logger.warning(f"Microphone listing check note: {e}")
-
     try:
         with sr.Microphone() as source:
             speech_logger.info("Microphone open. Calibrating ambient noise...")

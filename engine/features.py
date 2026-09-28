@@ -3,7 +3,6 @@ import re
 import random
 import sqlite3
 import webbrowser
-from playsound import playsound
 import eel
 
 from engine.command import speak
@@ -51,20 +50,46 @@ YT_PHRASES_HINGLISH = [
     "Bilkul! YouTube par {term} chala diya hai."
 ]
 
-def playAssistantSound():
-    music_dir = "www\\assets\\audio\\start_sound.mp3"
+def _init_audio_mixer():
     try:
-        playsound(music_dir)
-    except Exception as e:
-        print(f"Error playing start sound: {e}")
+        import pygame
+        if not pygame.mixer.get_init():
+            pygame.mixer.init()
+    except Exception:
+        pass
+
+def playAssistantSound():
+    """Play startup sound asynchronously without blocking startup."""
+    def _play():
+        try:
+            import pygame
+            _init_audio_mixer()
+            sound_path = os.path.join("www", "assets", "audio", "start_sound.mp3")
+            if os.path.exists(sound_path):
+                sound = pygame.mixer.Sound(sound_path)
+                sound.set_volume(0.6)
+                sound.play()
+        except Exception as e:
+            print(f"Start sound notice: {e}")
+    import threading
+    threading.Thread(target=_play, daemon=True).start()
 
 @eel.expose
 def playClickSound():
-    music_dir = "www\\assets\\audio\\click_sound.mp3"
-    try:
-        playsound(music_dir)
-    except Exception as e:
-        print(f"Error playing click sound: {e}")
+    """Play UI click sound asynchronously."""
+    def _play():
+        try:
+            import pygame
+            _init_audio_mixer()
+            sound_path = os.path.join("www", "assets", "audio", "click_sound.mp3")
+            if os.path.exists(sound_path):
+                sound = pygame.mixer.Sound(sound_path)
+                sound.set_volume(0.4)
+                sound.play()
+        except Exception as e:
+            pass
+    import threading
+    threading.Thread(target=_play, daemon=True).start()
 
 def is_hindi(text: str) -> bool:
     return bool(re.search(r'[\u0900-\u097F]', text)) or any(w in text.lower() for w in ["kholo", "chalao", "bajao", "sunao", "karo", "bhejo"])
