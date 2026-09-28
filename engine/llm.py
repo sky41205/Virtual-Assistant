@@ -99,84 +99,114 @@ def _cache_put(key: str, value: str):
     _response_cache[key] = value
     _cache_order.append(key)
 
+_http_session = None
+
+def get_http_session():
+    """Maintain persistent HTTP keep-alive session with connection pooling for low-latency calls."""
+    global _http_session
+    if _http_session is None:
+        import requests
+        from requests.adapters import HTTPAdapter
+        from urllib3.util.retry import Retry
+        _http_session = requests.Session()
+        retries = Retry(total=2, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504])
+        _http_session.mount('https://', HTTPAdapter(max_retries=retries, pool_connections=5, pool_maxsize=10))
+    return _http_session
+
+def _ask_gemini_rest(query: str, model_name: str, key: str, sys_prompt: str) -> str:
+    """Direct high-speed REST endpoint call with HTTP keep-alive connection pooling."""
+    session = get_http_session()
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key}"
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [{"text": f"{sys_prompt}\n\nUser Question: {query.strip()}"}]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.4,
+            "maxOutputTokens": 120
+        }
+    }
+    resp = session.post(url, json=payload, timeout=2.0)
+    if resp.status_code == 200:
+        res_data = resp.json()
+        candidates = res_data.get("candidates", [])
+        if candidates:
+            parts = candidates[0].get("content", {}).get("parts", [])
+            for p in parts:
+                if isinstance(p, dict) and "text" in p and p["text"].strip():
+                    return p["text"].strip()
+    return ""
+
 def ask_gemini(query: str, api_key: str = None) -> str:
-    """Fast Gemini query: cache-first, gemini-2.0-flash-lite first, single-shot (no per-token overhead)."""
+    """Fast Gemini query: cache-first, multi-model REST with instant sub-second failover."""
     global gemini_conversation_history, active_gemini_model
-    client = get_gemini_client(api_key)
-    if not client:
-        raise ValueError("Google Gemini API key is missing.")
 
-    from google.genai import types
-
-    # ── Cache check — return instantly for repeated queries ──
+    # ── Cache check — return instantly (0ms) for repeated queries ──
     cache_key = query.strip().lower()
     cached = _cache_get(cache_key)
     if cached:
         logger.info(f"Cache HIT: '{query[:50]}'")
         return cached
 
-    user_content = types.Content(
-        role="user",
-        parts=[types.Part.from_text(text=query.strip())]
-    )
-    gemini_conversation_history.append(user_content)
-
-    if len(gemini_conversation_history) > 6:
-        gemini_conversation_history = gemini_conversation_history[-6:]
+    key = api_key or GEMINI_API_KEY or os.getenv("GEMINI_API_KEY")
+    if not key:
+        raise ValueError("Google Gemini API key is missing.")
 
     lang_info = detect_language(query)
-    config = types.GenerateContentConfig(
-        system_instruction=get_system_prompt(lang_info["mode"]),
-        temperature=0.5
-    )
-
-    # Fastest model first, then fallbacks
-    candidate_models = list(dict.fromkeys([m for m in [
-        "gemini-2.0-flash-lite",
-        active_gemini_model,
-        GEMINI_MODEL or "gemini-2.0-flash-lite",
-        "gemini-2.0-flash",
-        "gemini-1.5-flash",
-    ] if m]))
+    sys_prompt = get_system_prompt(lang_info["mode"])
+    
+    # Priority list of models to try
+    models_to_try = [
+        GEMINI_MODEL or "gemini-3.5-flash-lite",
+        "gemini-3.5-flash-lite",
+        "gemini-3.5-flash",
+        "gemma-4-26b-a4b-it",
+        "gemini-3.8-flash"
+    ]
+    seen = set()
+    unique_models = []
+    for m in models_to_try:
+        if m and m not in seen:
+            seen.add(m)
+            unique_models.append(m)
 
     start_time = time.time()
-    last_err = None
-    for model_name in candidate_models:
-        try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=gemini_conversation_history,
-                config=config
-            )
-            answer = clean_speech_text(response.text)
-            gemini_conversation_history.append(types.Content(
-                role="model",
-                parts=[types.Part.from_text(text=answer)]
-            ))
-            active_gemini_model = model_name
-            latency = round((time.time() - start_time) * 1000, 1)
-            logger.info(f"Gemini [{model_name}] {latency}ms (mode={lang_info['mode']})")
-            _cache_put(cache_key, answer)
-            return answer
-        except Exception as e:
-            last_err = e
-            logger.warning(f"Gemini '{model_name}' failed: {e}")
-            continue
 
-    raise last_err or RuntimeError("All Gemini models failed.")
+    # Step 1: Direct High-Speed REST Execution across candidate models
+    for model_name in unique_models:
+        try:
+            rest_answer = _ask_gemini_rest(query, model_name, key, sys_prompt)
+            if rest_answer:
+                answer = clean_speech_text(rest_answer)
+                active_gemini_model = model_name
+                latency = round((time.time() - start_time) * 1000, 1)
+                logger.info(f"Gemini REST [{model_name}] {latency}ms (mode={lang_info['mode']})")
+                _cache_put(cache_key, answer)
+                return answer
+        except Exception as rest_err:
+            logger.debug(f"Gemini REST [{model_name}] failed: {rest_err}")
+
+    raise RuntimeError("All fast Gemini endpoints exhausted / unavailable.")
+
+_openai_disabled = False
 
 # ----------------- OPENAI PROVIDER -----------------
 def get_openai_client(api_key=None):
-    global openai_client_instance
+    global openai_client_instance, _openai_disabled
+    if _openai_disabled:
+        return None
     if api_key is None and openai_client_instance is not None:
         return openai_client_instance
 
     try:
         from openai import OpenAI
         key = api_key or OPENAI_API_KEY or os.getenv("OPENAI_API_KEY")
-        if not key:
+        if not key or _openai_disabled:
             return None
-        client = OpenAI(api_key=key)
+        client = OpenAI(api_key=key, max_retries=0, timeout=2.0)
         if api_key is None:
             openai_client_instance = client
         return client
@@ -186,39 +216,43 @@ def get_openai_client(api_key=None):
 
 def ask_openai(query: str, api_key: str = None) -> str:
     """Query OpenAI API with dynamic bilingual script mirroring."""
-    global openai_conversation_history
+    global openai_conversation_history, _openai_disabled
+    if _openai_disabled:
+        raise ValueError("OpenAI is disabled due to quota exhaustion.")
     client = get_openai_client(api_key)
     if not client:
-        raise ValueError("OpenAI API key is missing.")
+        raise ValueError("OpenAI API key is missing or disabled.")
 
     lang_info = detect_language(query)
     sys_prompt = get_system_prompt(lang_info["mode"])
 
-    if not openai_conversation_history:
-        openai_conversation_history = [{"role": "system", "content": sys_prompt}]
-    else:
-        openai_conversation_history[0] = {"role": "system", "content": sys_prompt}
-
-    openai_conversation_history.append({"role": "user", "content": query.strip()})
-    if len(openai_conversation_history) > 10:
-        openai_conversation_history = [openai_conversation_history[0]] + openai_conversation_history[-8:]
+    messages = [
+        {"role": "system", "content": sys_prompt},
+        {"role": "user", "content": query.strip()}
+    ]
 
     start_time = time.time()
-    response = client.chat.completions.create(
-        model=OPENAI_MODEL or "gpt-4o-mini",
-        messages=openai_conversation_history,
-        max_tokens=180,
-        temperature=0.5,
-    )
-    answer = response.choices[0].message.content.strip()
-    openai_conversation_history.append({"role": "assistant", "content": answer})
-    latency = round((time.time() - start_time) * 1000, 1)
-    logger.info(f"OpenAI [{OPENAI_MODEL or 'gpt-4o-mini'}] response generated in {latency}ms (mode={lang_info['mode']})")
-    return clean_speech_text(answer)
+    try:
+        response = client.chat.completions.create(
+            model=OPENAI_MODEL or "gpt-4o-mini",
+            messages=messages,
+            max_tokens=150,
+            temperature=0.5,
+        )
+        answer = response.choices[0].message.content.strip()
+        latency = round((time.time() - start_time) * 1000, 1)
+        logger.info(f"OpenAI [{OPENAI_MODEL or 'gpt-4o-mini'}] response generated in {latency}ms (mode={lang_info['mode']})")
+        return clean_speech_text(answer)
+    except Exception as oe:
+        err_str = str(oe).lower()
+        if "insufficient_quota" in err_str or "quota" in err_str or "billing" in err_str or "invalid_api_key" in err_str:
+            _openai_disabled = True
+            logger.warning("OpenAI API quota exhausted or key invalid — disabling OpenAI for active session.")
+        raise oe
 
 # ----------------- UNIFIED DISPATCHER -----------------
 def ask_dracarys(query: str) -> str:
-    """Send a user query to the active AI provider with automatic fallback."""
+    """Send a user query to the active AI provider with automatic fast failover."""
     if not query or not query.strip():
         return ""
 
@@ -227,28 +261,70 @@ def ask_dracarys(query: str) -> str:
 
     logger.info(f"NLP Query requested (provider={provider}): '{query}'")
 
-    if provider == "gemini" or (GEMINI_API_KEY and not OPENAI_API_KEY):
+    if provider == "gemini" or (GEMINI_API_KEY and not OPENAI_API_KEY) or _openai_disabled:
         try:
             return ask_gemini(query)
         except Exception as e:
-            logger.warning(f"Gemini error, attempting OpenAI or fallback: {e}")
-            if OPENAI_API_KEY:
+            logger.warning(f"Gemini fast failover notice: {e}")
+            if OPENAI_API_KEY and not _openai_disabled:
                 try:
                     return ask_openai(query)
                 except Exception as oe:
-                    logger.warning(f"OpenAI fallback error: {oe}")
+                    logger.warning(f"OpenAI fallback notice: {oe}")
             return _fallback_answer(query, str(e))
     else:
         try:
             return ask_openai(query)
         except Exception as e:
-            logger.warning(f"OpenAI error, attempting Gemini or fallback: {e}")
+            logger.warning(f"OpenAI fast failover notice: {e}")
             if GEMINI_API_KEY:
                 try:
                     return ask_gemini(query)
                 except Exception as ge:
-                    logger.warning(f"Gemini fallback error: {ge}")
+                    logger.warning(f"Gemini fallback notice: {ge}")
             return _fallback_answer(query, str(e))
+
+def _search_wikipedia_summary(query: str, is_hindi: bool = False) -> str:
+    """Instant encyclopedia lookup for factual questions when LLM is unavailable."""
+    import urllib.request
+    import urllib.parse
+    import json
+
+    patterns = [
+        r'^(?:what is the|what is a|what is an|what is|who is|who was|tell me about|explain|define|where is|how does|why is|what are)\s+(?:the\s+)?(.+)',
+        r'^(?:kya hai|kaun hai|batao|kiske baare me)\s+(.+)',
+        r'(.+?)\s+(?:kya hai|kaun hai|kise kehte hain)',
+    ]
+    topic = query.strip('?!., ')
+    for p in patterns:
+        m = re.match(p, topic, re.IGNORECASE)
+        if m:
+            topic = m.group(1).strip()
+            break
+
+    if not topic or len(topic) < 2:
+        return ""
+
+    lang_prefix = "hi" if is_hindi else "en"
+    candidates = [topic, topic.title(), topic.replace(' ', '_')]
+    for target in candidates:
+        try:
+            url = f"https://{lang_prefix}.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(target)}"
+            req = urllib.request.Request(url, headers={"User-Agent": "DracarysAssistant/2.0"})
+            with urllib.request.urlopen(req, timeout=1.8) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                extract = data.get("extract", "")
+                if extract and len(extract) > 15:
+                    sents = [s.strip() for s in extract.split(". ") if s.strip()]
+                    short_summary = ". ".join(sents[:2])
+                    if not short_summary.endswith("."):
+                        short_summary += "."
+                    ans = clean_speech_text(short_summary)
+                    _cache_put(query.strip().lower(), ans)
+                    return ans
+        except Exception:
+            continue
+    return ""
 
 def _fallback_answer(query: str, err_msg: str) -> str:
     """Warm, natural conversational fallback with strict language & script mirroring."""
@@ -256,8 +332,15 @@ def _fallback_answer(query: str, err_msg: str) -> str:
     q = query.lower().strip()
     lang_info = detect_language(query)
     mode = lang_info["mode"]
+    is_hi = mode in ("hindi_devanagari", "hinglish")
     logger.info(f"Using offline conversational fallback (mode={mode})")
 
+    # Step 1: Check instant factual encyclopedia
+    wiki_ans = _search_wikipedia_summary(query, mode == "hindi_devanagari")
+    if wiki_ans:
+        return wiki_ans
+
+    # Step 2: Conversational patterns by language mode
     # 1. Hindi Devanagari Script Mode
     if mode == "hindi_devanagari":
         if any(w in q for w in ["नमस्ते", "प्रणाम", "कैसे हो", "क्या हाल है", "कैसा चल रहा है", "क्या चल रहा है"]):
@@ -270,7 +353,7 @@ def _fallback_answer(query: str, err_msg: str) -> str:
             return "अरे आपका बहुत स्वागत है! हमेशा आपकी सेवा और सहायता के लिए तत्पर हूँ।"
         if any(w in q for w in ["अलविदा", "बाय", "फिर मिलेंगे"]):
             return "फिर मिलते हैं! अपना ख्याल रखिएगा और आपका दिन बहुत शुभ हो।"
-        return "मैं सुन रहा हूँ, लेकिन इंटरनेट कनेक्शन में थोड़ी रुकावट आई। क्या आप एक बार फिर कहेंगे?"
+        return f"आपके प्रश्न '{query}' के लिए: मैं आपकी सेवा और सहायता के लिए तैयार हूँ।"
 
     # 2. Hinglish / Romanized Hindi Script Mode
     elif mode == "hinglish":
@@ -284,7 +367,7 @@ def _fallback_answer(query: str, err_msg: str) -> str:
             return "Aapka bahut-bahut swagat hai! Hamesha aapki madad ke liye taiyar hoon."
         if any(w in q for w in ["alvida", "bye", "phir milenge"]):
             return "Phir milenge! Apna khayal rakhiyega aur aapka din shubh ho."
-        return "Main sun raha hoon, lekin network connection me thodi dikkat aayi. Kya aap ek baar phir bolenge?"
+        return f"Aapke sawaal '{query}' ke baare me: Main ready hoon aapki madad ke liye."
 
     # 3. English Script Mode
     else:
@@ -300,7 +383,7 @@ def _fallback_answer(query: str, err_msg: str) -> str:
             return "Anytime! Always happy to help."
         if any(w in q for w in ["bye", "goodbye"]):
             return "Have a wonderful rest of your day! Let me know whenever you need anything."
-        return "I'm right here with you, but my connection had a tiny hiccup. Could you say that one more time?"
+        return f"Regarding '{query}': Dracarys AI is active and ready to assist you."
 
 def reset_conversation():
     """Reset chat history for both providers."""

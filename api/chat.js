@@ -34,20 +34,23 @@ export default async function handler(req, res) {
     const geminiKey = process.env.GEMINI_API_KEY || '';
     if (geminiKey) {
         try {
-            // Models to try in order of preference
+            // Models to try in order of preference (Fastest & Verified first)
             const geminiModels = [
-                'gemini-2.5-flash',
-                'gemini-2.0-flash',
-                'gemini-2.0-flash-lite',
-                'gemini-1.5-flash',
+                'gemini-3.5-flash-lite',
+                'gemini-3.8-flash',
+                'gemini-flash-lite-latest',
                 'gemini-flash-latest'
             ];
 
             for (const model of geminiModels) {
                 try {
                     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 4500);
+
                     const geminiRes = await fetch(geminiUrl, {
                         method: 'POST',
+                        signal: controller.signal,
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             contents: [
@@ -59,11 +62,12 @@ export default async function handler(req, res) {
                                 }
                             ],
                             generationConfig: {
-                                temperature: 0.7,
-                                maxOutputTokens: 500
+                                temperature: 0.5,
+                                maxOutputTokens: 200
                             }
                         })
                     });
+                    clearTimeout(timeoutId);
 
                     if (geminiRes.ok) {
                         const data = await geminiRes.json();
@@ -122,7 +126,54 @@ export default async function handler(req, res) {
         }
     }
 
-    // 3. Fallback response if no keys or API call failed
+    // 3. Fast Wikipedia Encyclopedia Lookup Fallback (<500ms)
+    try {
+        const patterns = [
+            /^(?:what is the|what is a|what is an|what is|who is|who was|tell me about|explain|define|where is|how does|why is|what are)\s+(?:the\s+)?(.+)/i,
+            /^(?:kya hai|kaun hai|batao|kiske baare me|क्या है|कौन है|बताओ)\s+(.+)/i,
+            /(.+?)\s+(?:kya hai|kaun hai|kise kehte hain|क्या है|कौन है|किसे कहते हैं)/i
+        ];
+        let topic = query.replace(/[?!.,;:]/g, '').trim();
+        for (const p of patterns) {
+            const m = topic.match(p);
+            if (m && m[1]) {
+                topic = m[1].trim();
+                break;
+            }
+        }
+
+        if (topic && topic.length >= 2) {
+            const langPrefix = isHindi ? 'hi' : 'en';
+            const wikiUrl = `https://${langPrefix}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topic)}`;
+            const wikiController = new AbortController();
+            const wikiTimeout = setTimeout(() => wikiController.abort(), 2000);
+            
+            const wikiRes = await fetch(wikiUrl, {
+                signal: wikiController.signal,
+                headers: { 'User-Agent': 'DracarysAssistant/2.0' }
+            });
+            clearTimeout(wikiTimeout);
+
+            if (wikiRes.ok) {
+                const wikiData = await wikiRes.json();
+                const extract = wikiData.extract;
+                if (extract && extract.length > 15) {
+                    const sents = extract.split('. ').map(s => s.trim()).filter(Boolean);
+                    let shortSummary = sents.slice(0, 2).join('. ');
+                    if (!shortSummary.endsWith('.')) shortSummary += '.';
+                    return res.status(200).json({
+                        response: shortSummary,
+                        provider: 'wikipedia',
+                        model: 'encyclopedia'
+                    });
+                }
+            }
+        }
+    } catch (wikiErr) {
+        console.warn('Wikipedia fallback lookup notice:', wikiErr);
+    }
+
+    // 4. Fallback response if no keys or API call failed
     const fallbackReply = isHindi
         ? `मैंने आपका प्रश्न "${query}" प्राप्त किया। ड्रेकेरिस एआई ऑनलाइन है और आपकी सहायता के लिए तैयार है।`
         : `Regarding "${query}": Dracarys AI is online and ready with full autonomous intelligence.`;

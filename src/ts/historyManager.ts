@@ -31,40 +31,11 @@ export class HistoryManager {
     }
 
     public loadHistory(): void {
-        if (window.eel && window.eel.getCommandHistory) {
-            window.eel.getCommandHistory(50)((history: HistoryItem[]) => {
-                this.renderHistory(history || []);
-            });
-        } else {
-            try {
-                const localData = localStorage.getItem("dracarys_command_history");
-                const items: HistoryItem[] = localData ? JSON.parse(localData) : [];
-                this.renderHistory(items);
-            } catch {
-                this.renderHistory([]);
-            }
-        }
-    }
+        if (!window.eel || !window.eel.getCommandHistory) return;
 
-    public recordTask(command: string, response: string = "", source: "voice" | "chat" = "chat"): void {
-        if (!command || !command.trim()) return;
-        try {
-            const localData = localStorage.getItem("dracarys_command_history");
-            const items: HistoryItem[] = localData ? JSON.parse(localData) : [];
-            const newItem: HistoryItem = {
-                id: Date.now(),
-                command: command.trim(),
-                response: response.trim(),
-                source: source,
-                timestamp: new Date().toISOString()
-            };
-            items.unshift(newItem);
-            if (items.length > 50) items.length = 50;
-            localStorage.setItem("dracarys_command_history", JSON.stringify(items));
-            this.renderHistory(items);
-        } catch (e) {
-            console.warn("recordTask notice:", e);
-        }
+        window.eel.getCommandHistory(50)((history: HistoryItem[]) => {
+            this.renderHistory(history || []);
+        });
     }
 
     private renderHistory(items: HistoryItem[]): void {

@@ -127,7 +127,7 @@ export interface AuditLogEntry {
 export interface QuickActionItem {
     id: string;
     title: string;
-    category: "General" | "Apps" | "Websites" | "Automation" | "System" | "Academic" | "Workplace" | "Personal";
+    category: "General" | "Apps" | "Websites" | "Automation" | "System";
     icon: string;
     shortcut?: string;
     action: () => void;
@@ -183,7 +183,7 @@ export interface LogEntry {
 }
 
 export interface SubsystemHealth {
-    status: "ONLINE" | "CONFIGURED" | "WARNING" | "ATTENTION" | "ERROR" | "OFFLINE" | "FALLBACK" | "HEALTHY" | "DEGRADED";
+    status: "ONLINE" | "CONFIGURED" | "WARNING" | "ERROR" | "OFFLINE" | "FALLBACK";
     message: string;
     provider?: string;
     default?: string;
@@ -231,13 +231,9 @@ declare global {
         openDashboard?: () => void;
         openSettingsPanel?: () => void;
         openLogsPanel?: () => void;
-        appendUserCommand?: (query: string, source?: string, langMode?: string) => void;
-        appendAssistantResponse?: (text: string, cardType?: string, cardData?: any, status?: string, langMode?: string) => void;
+        appendUserCommand?: (query: string, source: string) => void;
+        appendAssistantResponse?: (text: string, cardType: string, cardData: any, status: string) => void;
         showErrorNotification?: (title: string, message: string, errorType: string) => void;
-        triggerDracarysFire?: (intensity?: number) => void;
-        toggleDragonMode?: () => void;
-        setDragonTheme?: (theme: string) => void;
-        toggleDragonVisibility?: () => void;
     }
 }
 
