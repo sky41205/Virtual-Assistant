@@ -28,7 +28,7 @@ export class VoiceSettingsManager {
                 if (window.eel && window.eel.testVoice) {
                     window.eel.testVoice(voice, "hindi")();
                 } else if (window.assistantApp && window.assistantApp.speechManager) {
-                    window.assistantApp.speechManager.speak("नमस्ते! मैं ड्रेकेरिस एआई हूँ। यह मेरी हिंदी आवाज़ का ऑडियो टेस्ट है।", "hi-IN");
+                    window.assistantApp.speechManager.speak("नमस्ते! मैं ड्रेकेरिस एआई हूँ। आपकी हिंदी वॉयस सफलतापूर्वक काम कर रही है।", "hi-IN");
                 }
             });
         }
@@ -40,7 +40,7 @@ export class VoiceSettingsManager {
                 if (window.eel && window.eel.testVoice) {
                     window.eel.testVoice(voice, "english")();
                 } else if (window.assistantApp && window.assistantApp.speechManager) {
-                    window.assistantApp.speechManager.speak("Hello! I am Dracarys AI. This is a preview of my voice synthesizer.", "en-US");
+                    window.assistantApp.speechManager.speak("Hello! I am Dracarys AI. Your English neural voice is online and speaking clearly.", "en-US");
                 }
             });
         }

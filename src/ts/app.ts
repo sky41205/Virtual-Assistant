@@ -354,8 +354,8 @@ export class AssistantApp {
                         ? "hi-IN-SwaraNeural"
                         : "en-IN-NeerjaNeural";
                     window.eel.testVoice(voice, lang.mode)();
-                } else if (window.eel && window.eel.allCommands) {
-                    window.eel.allCommands(this.lastAssistantResponse)();
+                } else {
+                    this.speechManager.speak(this.lastAssistantResponse, lang.mode);
                 }
             });
         }
