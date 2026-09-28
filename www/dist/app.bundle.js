@@ -352,7 +352,21 @@
   var SpeechManager = class {
     constructor(onStateChange) {
       this.isSpeaking = false;
+      this.availableVoices = [];
+      this.preferredHindiVoiceName = "Swara";
+      this.preferredEnglishVoiceName = "Neerja";
       this.onSpeakingStateChange = onStateChange;
+      this.initVoiceList();
+    }
+    initVoiceList() {
+      if (!("speechSynthesis" in window)) return;
+      const loadVoices = () => {
+        this.availableVoices = window.speechSynthesis.getVoices();
+      };
+      loadVoices();
+      if (window.speechSynthesis.onvoiceschanged !== void 0) {
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+      }
     }
     setSpeaking(speaking) {
       this.isSpeaking = speaking;
@@ -363,19 +377,79 @@
     getSpeakingState() {
       return this.isSpeaking;
     }
-    speak(text, lang = "en-US") {
+    setPreferredVoices(hindiVoice, englishVoice) {
+      if (hindiVoice) this.preferredHindiVoiceName = hindiVoice;
+      if (englishVoice) this.preferredEnglishVoiceName = englishVoice;
+    }
+    getBestVoice(isHindi) {
+      if (!this.availableVoices || this.availableVoices.length === 0) {
+        this.availableVoices = window.speechSynthesis.getVoices();
+      }
+      if (this.availableVoices.length === 0) return null;
+      if (isHindi) {
+        let match = this.availableVoices.find(
+          (v) => v.name.toLowerCase().includes("swara") || v.name.toLowerCase().includes("madhur") || v.name.toLowerCase().includes("kalpana") || v.name.toLowerCase().includes("hemant")
+        );
+        if (match) return match;
+        match = this.availableVoices.find(
+          (v) => v.lang.toLowerCase().startsWith("hi") || v.name.toLowerCase().includes("hindi") || v.name.toLowerCase().includes("\u0939\u093F\u0928\u094D\u0926\u0940")
+        );
+        if (match) return match;
+      } else {
+        let match = this.availableVoices.find(
+          (v) => v.name.toLowerCase().includes("neerja") || v.name.toLowerCase().includes("prabhat") || v.name.toLowerCase().includes("natural") || v.name.toLowerCase().includes("jenny") || v.name.toLowerCase().includes("guy")
+        );
+        if (match) return match;
+        match = this.availableVoices.find(
+          (v) => v.lang.toLowerCase() === "en-in" || v.lang.toLowerCase() === "en-us" || v.lang.toLowerCase().startsWith("en")
+        );
+        if (match) return match;
+      }
+      return this.availableVoices[0] || null;
+    }
+    speak(text, langMode = "en") {
       if (!text || !text.trim()) return;
-      if ("speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = lang === "hi" || lang === "hi-IN" || lang === "hindi_devanagari" || lang === "hinglish" ? "hi-IN" : "en-US";
+      if (!("speechSynthesis" in window)) return;
+      const cleanText = text.replace(/\*\*(.*?)\*\*/g, "$1").replace(/`([^`]+)`/g, "$1").replace(/```[\s\S]*?```/g, "").replace(/[#*_~`>[\]()]/g, " ").replace(/https?:\/\/\S+/g, "link").replace(/\s+/g, " ").trim();
+      if (!cleanText) return;
+      this.stopSpeech();
+      window.speechSynthesis.resume();
+      const isHindi = langMode === "hi" || langMode === "hi-IN" || langMode === "hindi_devanagari" || langMode === "hinglish";
+      const voiceObj = this.getBestVoice(isHindi);
+      const sentences = cleanText.match(/[^.!?।\n]+[.!?।\n]+/g) || [cleanText];
+      let index = 0;
+      const speakNextSentence = () => {
+        if (index >= sentences.length) {
+          this.setSpeaking(false);
+          return;
+        }
+        const sentence = sentences[index++].trim();
+        if (!sentence) {
+          speakNextSentence();
+          return;
+        }
+        const utterance = new SpeechSynthesisUtterance(sentence);
+        utterance.lang = isHindi ? "hi-IN" : "en-US";
         utterance.rate = 1;
         utterance.pitch = 1;
-        utterance.onstart = () => this.setSpeaking(true);
-        utterance.onend = () => this.setSpeaking(false);
-        utterance.onerror = () => this.setSpeaking(false);
+        if (voiceObj) {
+          utterance.voice = voiceObj;
+        }
+        utterance.onstart = () => {
+          this.setSpeaking(true);
+        };
+        utterance.onend = () => {
+          speakNextSentence();
+        };
+        utterance.onerror = (e) => {
+          if (e.error !== "canceled" && e.error !== "interrupted") {
+            console.warn("SpeechSynthesis error:", e.error);
+          }
+          this.setSpeaking(false);
+        };
         window.speechSynthesis.speak(utterance);
-      }
+      };
+      speakNextSentence();
     }
     stopSpeech() {
       this.isSpeaking = false;
@@ -552,6 +626,8 @@
           const voice = document.getElementById("settingHindiVoice")?.value || "hi-IN-SwaraNeural";
           if (window.eel && window.eel.testVoice) {
             window.eel.testVoice(voice, "hindi")();
+          } else if (window.assistantApp && window.assistantApp.speechManager) {
+            window.assistantApp.speechManager.speak("\u0928\u092E\u0938\u094D\u0924\u0947! \u092E\u0948\u0902 \u0921\u094D\u0930\u0947\u0915\u0947\u0930\u093F\u0938 \u090F\u0906\u0908 \u0939\u0942\u0901\u0964 \u092F\u0939 \u092E\u0947\u0930\u0940 \u0939\u093F\u0902\u0926\u0940 \u0906\u0935\u093E\u091C\u093C \u0915\u093E \u0911\u0921\u093F\u092F\u094B \u091F\u0947\u0938\u094D\u091F \u0939\u0948\u0964", "hi-IN");
           }
         });
       }
@@ -561,6 +637,8 @@
           const voice = document.getElementById("settingEnglishVoice")?.value || "en-IN-NeerjaNeural";
           if (window.eel && window.eel.testVoice) {
             window.eel.testVoice(voice, "english")();
+          } else if (window.assistantApp && window.assistantApp.speechManager) {
+            window.assistantApp.speechManager.speak("Hello! I am Dracarys AI. This is a preview of my voice synthesizer.", "en-US");
           }
         });
       }
