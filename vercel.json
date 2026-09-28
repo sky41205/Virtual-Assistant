@@ -29,12 +29,32 @@
       "dest": "/api/chat.js"
     },
     {
+      "src": "/style.css",
+      "dest": "/www/style.css"
+    },
+    {
+      "src": "/controller.js",
+      "dest": "/www/controller.js"
+    },
+    {
+      "src": "/main.js",
+      "dest": "/www/main.js"
+    },
+    {
+      "src": "/dist/(.*)",
+      "dest": "/www/dist/$1"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/www/assets/$1"
+    },
+    {
       "src": "/landing",
       "dest": "/landing.html"
     },
     {
       "src": "/app",
-      "dest": "/app.html"
+      "dest": "/www/index.html"
     },
     {
       "src": "/(.*)",
