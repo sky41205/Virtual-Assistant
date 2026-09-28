@@ -241,33 +241,47 @@ def ask_dracarys(query: str) -> str:
     if not query or not query.strip():
         return ""
 
+    # Instant sub-millisecond cache check for repeated questions
+    cache_key = query.strip().lower()
+    cached = _cache_get(cache_key)
+    if cached:
+        logger.info(f"Cache HIT (dispatcher): '{query[:50]}'")
+        return cached
+
     from engine.config import AI_PROVIDER, GEMINI_API_KEY, OPENAI_API_KEY
     provider = (AI_PROVIDER or "gemini").lower().strip()
 
     logger.info(f"NLP Query requested (provider={provider}): '{query}'")
 
+    result = ""
     if provider == "gemini" or (GEMINI_API_KEY and not OPENAI_API_KEY) or _openai_disabled:
         try:
-            return ask_gemini(query)
+            result = ask_gemini(query)
         except Exception as e:
             logger.warning(f"Gemini fast failover notice: {e}")
             if OPENAI_API_KEY and not _openai_disabled:
                 try:
-                    return ask_openai(query)
+                    result = ask_openai(query)
                 except Exception as oe:
                     logger.warning(f"OpenAI fallback notice: {oe}")
-            return _fallback_answer(query, str(e))
+            if not result:
+                result = _fallback_answer(query, str(e))
     else:
         try:
-            return ask_openai(query)
+            result = ask_openai(query)
         except Exception as e:
             logger.warning(f"OpenAI fast failover notice: {e}")
             if GEMINI_API_KEY:
                 try:
-                    return ask_gemini(query)
+                    result = ask_gemini(query)
                 except Exception as ge:
                     logger.warning(f"Gemini fallback notice: {ge}")
-            return _fallback_answer(query, str(e))
+            if not result:
+                result = _fallback_answer(query, str(e))
+
+    if result:
+        _cache_put(cache_key, result)
+    return result
 
 def _search_wikipedia_summary(query: str, is_hindi: bool = False) -> str:
     """Instant encyclopedia lookup for factual questions when LLM is unavailable."""
@@ -277,8 +291,8 @@ def _search_wikipedia_summary(query: str, is_hindi: bool = False) -> str:
 
     patterns = [
         r'^(?:what is the|what is a|what is an|what is|who is|who was|tell me about|explain|define|where is|how does|why is|what are)\s+(?:the\s+)?(.+)',
-        r'^(?:kya hai|kaun hai|batao|kiske baare me)\s+(.+)',
-        r'(.+?)\s+(?:kya hai|kaun hai|kise kehte hain)',
+        r'^(?:kya hai|kaun hai|batao|kiske baare me|क्या है|कौन है|बताओ|किसके बारे में)\s+(.+)',
+        r'(.+?)\s+(?:kya hai|kaun hai|kise kehte hain|क्या है|कौन है|किसे कहते हैं)',
     ]
     topic = query.strip('?!., ')
     for p in patterns:
