@@ -1,0 +1,17 @@
+{
+  "cleanUrls": true,
+  "routes": [
+    {
+      "src": "/landing",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/app",
+      "dest": "/www/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
+}
