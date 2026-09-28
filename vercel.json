@@ -15,6 +15,10 @@
       "use": "@vercel/static"
     },
     {
+      "src": "app.html",
+      "use": "@vercel/static"
+    },
+    {
       "src": "www/**",
       "use": "@vercel/static"
     }
@@ -30,7 +34,7 @@
     },
     {
       "src": "/app",
-      "dest": "/www/index.html"
+      "dest": "/app.html"
     },
     {
       "src": "/(.*)",
