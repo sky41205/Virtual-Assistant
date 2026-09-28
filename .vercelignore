@@ -1,0 +1,19 @@
+# Ignore Python backend files for static Vercel deployment
+requirements.txt
+engine/
+main.py
+scratch/
+sophia.db
+venv/
+envSophia/
+__pycache__/
+*.py
+*.pyc
+*.db
+*.bat
+logs/
+*.log
+.env
+.env.local
+.git/
+node_modules/

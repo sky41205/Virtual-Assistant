@@ -1,9 +1,23 @@
 {
-  "cleanUrls": true,
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "landing.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "www/**",
+      "use": "@vercel/static"
+    }
+  ],
   "routes": [
     {
       "src": "/landing",
-      "dest": "/index.html"
+      "dest": "/landing.html"
     },
     {
       "src": "/app",
