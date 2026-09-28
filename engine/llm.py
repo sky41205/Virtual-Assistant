@@ -129,7 +129,7 @@ def _ask_gemini_rest(query: str, model_name: str, key: str, sys_prompt: str) -> 
             "maxOutputTokens": 120
         }
     }
-    resp = session.post(url, json=payload, timeout=2.0)
+    resp = session.post(url, json=payload, timeout=1.5)
     if resp.status_code == 200:
         res_data = resp.json()
         candidates = res_data.get("candidates", [])
@@ -141,7 +141,7 @@ def _ask_gemini_rest(query: str, model_name: str, key: str, sys_prompt: str) -> 
     return ""
 
 def ask_gemini(query: str, api_key: str = None) -> str:
-    """Fast Gemini query: cache-first, multi-model REST with instant sub-second failover."""
+    """Fast Gemini query: cache-first, single-shot REST with instant sub-second failover."""
     global gemini_conversation_history, active_gemini_model
 
     # ── Cache check — return instantly (0ms) for repeated queries ──
@@ -157,39 +157,24 @@ def ask_gemini(query: str, api_key: str = None) -> str:
 
     lang_info = detect_language(query)
     sys_prompt = get_system_prompt(lang_info["mode"])
-    
-    # Priority list of models to try
-    models_to_try = [
-        GEMINI_MODEL or "gemini-3.5-flash-lite",
-        "gemini-3.5-flash-lite",
-        "gemini-3.5-flash",
-        "gemma-4-26b-a4b-it",
-        "gemini-3.8-flash"
-    ]
-    seen = set()
-    unique_models = []
-    for m in models_to_try:
-        if m and m not in seen:
-            seen.add(m)
-            unique_models.append(m)
+    primary_model = GEMINI_MODEL or "gemini-3.5-flash-lite"
 
     start_time = time.time()
 
-    # Step 1: Direct High-Speed REST Execution across candidate models
-    for model_name in unique_models:
-        try:
-            rest_answer = _ask_gemini_rest(query, model_name, key, sys_prompt)
-            if rest_answer:
-                answer = clean_speech_text(rest_answer)
-                active_gemini_model = model_name
-                latency = round((time.time() - start_time) * 1000, 1)
-                logger.info(f"Gemini REST [{model_name}] {latency}ms (mode={lang_info['mode']})")
-                _cache_put(cache_key, answer)
-                return answer
-        except Exception as rest_err:
-            logger.debug(f"Gemini REST [{model_name}] failed: {rest_err}")
+    # Step 1: Direct High-Speed REST Execution (1.5s max timeout)
+    try:
+        rest_answer = _ask_gemini_rest(query, primary_model, key, sys_prompt)
+        if rest_answer:
+            answer = clean_speech_text(rest_answer)
+            active_gemini_model = primary_model
+            latency = round((time.time() - start_time) * 1000, 1)
+            logger.info(f"Gemini REST [{primary_model}] {latency}ms (mode={lang_info['mode']})")
+            _cache_put(cache_key, answer)
+            return answer
+    except Exception as rest_err:
+        logger.debug(f"Gemini REST fast attempt notice: {rest_err}")
 
-    raise RuntimeError("All fast Gemini endpoints exhausted / unavailable.")
+    raise RuntimeError(f"Gemini model {primary_model} fast timeout / unavailable.")
 
 _openai_disabled = False
 
