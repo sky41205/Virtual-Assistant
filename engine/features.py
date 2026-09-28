@@ -70,16 +70,13 @@ def is_hindi(text: str) -> bool:
     return bool(re.search(r'[\u0900-\u097F]', text)) or any(w in text.lower() for w in ["kholo", "chalao", "bajao", "sunao", "karo", "bhejo"])
 
 def openCommand(query):
-    """Open any desktop application, browser, or web shortcut using intelligent detection."""
+    """Open any desktop application, store app, file, folder, drive, browser, or web shortcut."""
     from engine.language_detector import detect_language
+    from engine.app_launcher import clean_app_query, launch_app, find_app
     lang_info = detect_language(query)
     lang_mode = lang_info["mode"]
 
-    clean_query = query.lower()
-    current_name = get_assistant_name().lower()
-    for w in [current_name, "open karo", "shuru karo", "start karo", "open", "launch", "start", "kholo", "chalao", "खोलो", "चलाओ", "खोलें"]:
-        clean_query = clean_query.replace(w, "")
-    clean_query = clean_query.strip()
+    clean_query = clean_app_query(query)
 
     if lang_mode == "hindi_devanagari":
         phrase_list = OPEN_PHRASES_HI
@@ -126,7 +123,7 @@ def openCommand(query):
     except Exception as e:
         print(f"Web database lookup notice: {e}")
 
-    # Check 2: Common web domains if specified (e.g. "open youtube", "open canva", "open github")
+    # Check 2: Common web domains if specified
     common_webs = {
         "youtube": "https://youtube.com",
         "google": "https://google.com",
@@ -151,7 +148,7 @@ def openCommand(query):
         webbrowser.open(common_webs[clean_query])
         return msg
 
-    # Check 3: Universal Windows Desktop Application Launcher
+    # Check 3: Universal Windows Desktop & UWP Store Application Launcher
     success, app_name = launch_app(clean_query)
     if success:
         msg = random.choice(phrase_list).format(name=app_name)
