@@ -352,36 +352,30 @@
   var SpeechManager = class {
     constructor(onStateChange) {
       this.isSpeaking = false;
-      this.availableVoices = [];
+      this.voices = [];
       this.keepAliveTimer = null;
-      this.fallbackAudio = null;
-      this.voicesLoaded = false;
       this.onSpeakingStateChange = onStateChange;
       this.initVoices();
     }
     initVoices() {
       if (!("speechSynthesis" in window)) return;
-      const load = () => {
+      const loadVoices = () => {
         try {
-          this.availableVoices = window.speechSynthesis.getVoices() || [];
-          if (this.availableVoices.length > 0) {
-            this.voicesLoaded = true;
-          }
+          this.voices = window.speechSynthesis.getVoices() || [];
         } catch (e) {
-          console.warn("SpeechManager getVoices notice:", e);
+          this.voices = [];
         }
       };
-      load();
-      if ("onvoiceschanged" in window.speechSynthesis) {
-        window.speechSynthesis.onvoiceschanged = () => load();
+      loadVoices();
+      if (window.speechSynthesis.onvoiceschanged !== void 0) {
+        window.speechSynthesis.onvoiceschanged = loadVoices;
       }
-      setTimeout(load, 500);
-      setTimeout(load, 1500);
     }
     setSpeaking(speaking) {
       this.isSpeaking = speaking;
-      if (!speaking) {
-        this.clearKeepAlive();
+      if (!speaking && this.keepAliveTimer) {
+        clearInterval(this.keepAliveTimer);
+        this.keepAliveTimer = null;
       }
       if (this.onSpeakingStateChange) {
         this.onSpeakingStateChange(speaking);
@@ -391,157 +385,64 @@
       return this.isSpeaking;
     }
     /**
-     * Clean text of markdown, URLs, emojis, and special symbols for natural TTS speech
+     * Clean markdown, emojis, URLs, and code blocks for crisp speech delivery
      */
-    sanitizeTextForSpeech(raw) {
-      if (!raw) return "";
-      let text = raw;
-      text = text.replace(/```[\s\S]*?```/g, " code block omitted. ");
-      text = text.replace(/`([^`]+)`/g, "$1");
-      text = text.replace(/[*#_~>]/g, "");
-      text = text.replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1");
-      text = text.replace(/https?:\/\/\S+/g, " link ");
-      text = text.replace(/^[•\-\*]\s+/gm, "");
-      text = text.replace(/[🔥⚡🧠✨💡🐉🎙️💻📱📄🧩🌐🤝🎉]/g, "");
-      text = text.replace(/\n+/g, ". ");
-      text = text.replace(/\s{2,}/g, " ");
-      return text.trim();
+    cleanTextForSpeech(text) {
+      if (!text) return "";
+      return text.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/```[\s\S]*?```/g, "Code block omitted.").replace(/`([^`]+)`/g, "$1").replace(/[*#_~`>]/g, "").replace(/[\u{1F300}-\u{1FAFF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{27BF}]/gu, "").replace(/\s+/g, " ").trim();
     }
-    /**
-     * Select best matching voice for the target language mode
-     */
-    findBestVoice(isHindi) {
-      if (!this.availableVoices || this.availableVoices.length === 0) {
-        this.availableVoices = window.speechSynthesis.getVoices() || [];
-      }
-      const voices = this.availableVoices;
-      if (!voices || voices.length === 0) return null;
-      if (isHindi) {
-        const hiVoice = voices.find(
-          (v) => v.lang.toLowerCase().startsWith("hi") || v.name.toLowerCase().includes("hindi") || v.name.toLowerCase().includes("swara") || v.name.toLowerCase().includes("madhur") || v.name.includes("\u0939\u093F\u0928\u094D\u0926\u0940")
-        );
-        if (hiVoice) return hiVoice;
-        const inVoice = voices.find((v) => v.lang.toLowerCase().includes("en-in") || v.name.toLowerCase().includes("india"));
-        if (inVoice) return inVoice;
-      } else {
-        const enInVoice = voices.find((v) => v.lang.toLowerCase().includes("en-in") || v.name.toLowerCase().includes("neerja"));
-        if (enInVoice) return enInVoice;
-        const enVoice = voices.find(
-          (v) => v.name.toLowerCase().includes("natural") || v.name.toLowerCase().includes("google") || v.name.toLowerCase().includes("jenny") || v.name.toLowerCase().includes("guy") || v.name.toLowerCase().includes("samantha") || v.lang.toLowerCase().startsWith("en")
-        );
-        if (enVoice) return enVoice;
-      }
-      return voices.find((v) => v.default) || voices[0] || null;
-    }
-    /**
-     * Speak text using Web Speech API with keepalive and audio fallback
-     */
     speak(text, lang = "en-US") {
-      const cleanText = this.sanitizeTextForSpeech(text);
-      if (!cleanText) return;
-      this.stopSpeech();
-      const isHindi = lang === "hi" || lang === "hi-IN" || lang === "hindi_devanagari" || lang === "hinglish" || /[\u0900-\u097F]/.test(cleanText);
-      const targetLangCode = isHindi ? "hi-IN" : "en-US";
-      if (!("speechSynthesis" in window)) {
-        this.speakWithAudioFallback(cleanText, isHindi ? "hi" : "en");
-        return;
-      }
+      if (!text || !text.trim()) return;
+      if (!("speechSynthesis" in window)) return;
+      const spokenClean = this.cleanTextForSpeech(text);
+      if (!spokenClean) return;
       try {
+        window.speechSynthesis.cancel();
         if (window.speechSynthesis.paused) {
           window.speechSynthesis.resume();
         }
-        const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.lang = targetLangCode;
-        utterance.rate = 1;
+        const utterance = new SpeechSynthesisUtterance(spokenClean);
+        const isHindi = lang === "hi" || lang === "hi-IN" || lang === "hindi_devanagari" || lang === "hinglish";
+        utterance.lang = isHindi ? "hi-IN" : "en-US";
+        utterance.rate = 1.05;
         utterance.pitch = 1;
         utterance.volume = 1;
-        const bestVoice = this.findBestVoice(isHindi);
-        if (bestVoice) {
-          utterance.voice = bestVoice;
+        if (this.voices.length === 0) {
+          this.voices = window.speechSynthesis.getVoices() || [];
         }
-        let started = false;
+        if (this.voices.length > 0) {
+          if (isHindi) {
+            const hiVoice = this.voices.find((v) => v.lang.includes("hi") || v.name.toLowerCase().includes("hindi") || v.name.toLowerCase().includes("swara") || v.name.toLowerCase().includes("madhur") || v.name.toLowerCase().includes("india"));
+            if (hiVoice) utterance.voice = hiVoice;
+          } else {
+            const enVoice = this.voices.find((v) => (v.lang === "en-IN" || v.lang === "en-US" || v.lang === "en-GB") && (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Neerja") || v.name.includes("Jenny") || v.name.includes("Samantha")));
+            if (enVoice) utterance.voice = enVoice;
+          }
+        }
         utterance.onstart = () => {
-          started = true;
           this.setSpeaking(true);
-          this.startKeepAlive();
+          if (this.keepAliveTimer) clearInterval(this.keepAliveTimer);
+          this.keepAliveTimer = setInterval(() => {
+            if (window.speechSynthesis.speaking) {
+              window.speechSynthesis.pause();
+              window.speechSynthesis.resume();
+            } else {
+              clearInterval(this.keepAliveTimer);
+              this.keepAliveTimer = null;
+            }
+          }, 1e4);
         };
         utterance.onend = () => {
           this.setSpeaking(false);
         };
-        utterance.onerror = (err) => {
-          console.warn("SpeechSynthesis error:", err);
+        utterance.onerror = (e) => {
+          console.warn("SpeechSynthesis utterance notice:", e);
           this.setSpeaking(false);
-          if (!started) {
-            this.speakWithAudioFallback(cleanText, isHindi ? "hi" : "en");
-          }
         };
-        setTimeout(() => {
-          try {
-            window.speechSynthesis.speak(utterance);
-            setTimeout(() => {
-              if (!started && this.isSpeaking) {
-                console.warn("SpeechSynthesis did not start, falling back to audio stream.");
-                this.speakWithAudioFallback(cleanText, isHindi ? "hi" : "en");
-              }
-            }, 1200);
-          } catch (speakErr) {
-            console.warn("speechSynthesis.speak error:", speakErr);
-            this.speakWithAudioFallback(cleanText, isHindi ? "hi" : "en");
-          }
-        }, 60);
-      } catch (e) {
-        console.warn("SpeechManager speak notice:", e);
-        this.speakWithAudioFallback(cleanText, isHindi ? "hi" : "en");
-      }
-    }
-    /**
-     * Fallback Web Audio TTS for environments where SpeechSynthesis is restricted
-     */
-    speakWithAudioFallback(text, langCode) {
-      try {
-        if (this.fallbackAudio) {
-          this.fallbackAudio.pause();
-          this.fallbackAudio = null;
-        }
-        const shortText = text.slice(0, 160);
-        const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${langCode}&client=tw-ob&q=${encodeURIComponent(shortText)}`;
-        const audio = new Audio(ttsUrl);
-        this.fallbackAudio = audio;
-        audio.onplay = () => this.setSpeaking(true);
-        audio.onended = () => this.setSpeaking(false);
-        audio.onerror = () => this.setSpeaking(false);
-        const playPromise = audio.play();
-        if (playPromise !== void 0) {
-          playPromise.catch((e) => {
-            console.warn("Audio TTS autoplay notice:", e);
-            this.setSpeaking(false);
-          });
-        }
+        window.speechSynthesis.speak(utterance);
       } catch (err) {
-        console.warn("speakWithAudioFallback notice:", err);
+        console.warn("SpeechSynthesis speak exception:", err);
         this.setSpeaking(false);
-      }
-    }
-    /**
-     * Chromium keepalive workaround for long utterances (>10 seconds)
-     */
-    startKeepAlive() {
-      this.clearKeepAlive();
-      this.keepAliveTimer = setInterval(() => {
-        if (!this.isSpeaking) {
-          this.clearKeepAlive();
-          return;
-        }
-        if ("speechSynthesis" in window) {
-          window.speechSynthesis.pause();
-          window.speechSynthesis.resume();
-        }
-      }, 8e3);
-    }
-    clearKeepAlive() {
-      if (this.keepAliveTimer) {
-        clearInterval(this.keepAliveTimer);
-        this.keepAliveTimer = null;
       }
     }
     stopSpeech() {
@@ -552,17 +453,11 @@
         } catch (e) {
         }
       }
-      if (this.fallbackAudio) {
-        try {
-          this.fallbackAudio.pause();
-          this.fallbackAudio = null;
-        } catch (e) {
-        }
-      }
       if (window.eel && window.eel.stopSpeechOutput) {
         try {
           window.eel.stopSpeechOutput();
         } catch (e) {
+          console.warn("stopSpeechOutput notice:", e);
         }
       }
     }
@@ -572,6 +467,7 @@
         try {
           window.eel.resetAssistantState();
         } catch (e) {
+          console.warn("resetAssistantState notice:", e);
         }
       }
     }
@@ -724,8 +620,6 @@
           const voice = document.getElementById("settingHindiVoice")?.value || "hi-IN-SwaraNeural";
           if (window.eel && window.eel.testVoice) {
             window.eel.testVoice(voice, "hindi")();
-          } else if (window.assistantApp && window.assistantApp.speechManager) {
-            window.assistantApp.speechManager.speak("\u0928\u092E\u0938\u094D\u0924\u0947! \u092E\u0948\u0902 \u0921\u094D\u0930\u0947\u0915\u0947\u0930\u093F\u0938 \u090F\u0906\u0908 \u0939\u0942\u0901\u0964 \u0906\u092A\u0915\u0940 \u0939\u093F\u0902\u0926\u0940 \u0935\u0949\u092F\u0938 \u0938\u092B\u0932\u0924\u093E\u092A\u0942\u0930\u094D\u0935\u0915 \u0915\u093E\u092E \u0915\u0930 \u0930\u0939\u0940 \u0939\u0948\u0964", "hi-IN");
           }
         });
       }
@@ -735,8 +629,6 @@
           const voice = document.getElementById("settingEnglishVoice")?.value || "en-IN-NeerjaNeural";
           if (window.eel && window.eel.testVoice) {
             window.eel.testVoice(voice, "english")();
-          } else if (window.assistantApp && window.assistantApp.speechManager) {
-            window.assistantApp.speechManager.speak("Hello! I am Dracarys AI. Your English neural voice is online and speaking clearly.", "en-US");
           }
         });
       }
@@ -3773,13 +3665,13 @@
           if (window.eel && window.eel.testVoice) {
             const voice = lang.mode === "hindi_devanagari" || lang.mode === "hinglish" ? "hi-IN-SwaraNeural" : "en-IN-NeerjaNeural";
             window.eel.testVoice(voice, lang.mode)();
-          } else {
-            this.speechManager.speak(this.lastAssistantResponse, lang.mode);
+          } else if (window.eel && window.eel.allCommands) {
+            window.eel.allCommands(this.lastAssistantResponse)();
           }
         });
       }
     }
-    displayActiveResponse(text, query, langMode) {
+    displayActiveResponse(text, query, langMode, autoSpeak = true) {
       this.lastAssistantResponse = text;
       const card = document.getElementById("activeResponseCard");
       const queryEcho = document.getElementById("responseQueryEcho");
@@ -3804,6 +3696,9 @@
       card.style.display = "block";
       const orbSummary = text.length > 60 ? text.slice(0, 57) + "\u2026" : text;
       this.setMessageText(orbSummary);
+      if (autoSpeak) {
+        this.speechManager.speak(text, langMode);
+      }
     }
     hideActiveResponse() {
       const card = document.getElementById("activeResponseCard");

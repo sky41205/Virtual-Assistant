@@ -1,17 +1,13 @@
 /* ================================================================
    DRACARYS AI — speechManager.ts
-   Robust Multilingual Speech Synthesis Engine
-   Supports Web Speech API (Edge/Chrome/Safari), Voice Selection,
-   Chromium Long-Speech Keepalive, and Audio Streaming Fallback
+   Client-Side Speech Cancellation & Natural Speech Synthesis Engine
    ================================================================ */
 
 export class SpeechManager {
     private isSpeaking: boolean = false;
     private onSpeakingStateChange?: (speaking: boolean) => void;
-    private availableVoices: SpeechSynthesisVoice[] = [];
+    private voices: SpeechSynthesisVoice[] = [];
     private keepAliveTimer: any = null;
-    private fallbackAudio: HTMLAudioElement | null = null;
-    private voicesLoaded: boolean = false;
 
     constructor(onStateChange?: (speaking: boolean) => void) {
         this.onSpeakingStateChange = onStateChange;
@@ -21,31 +17,25 @@ export class SpeechManager {
     private initVoices(): void {
         if (!("speechSynthesis" in window)) return;
 
-        const load = () => {
+        const loadVoices = () => {
             try {
-                this.availableVoices = window.speechSynthesis.getVoices() || [];
-                if (this.availableVoices.length > 0) {
-                    this.voicesLoaded = true;
-                }
+                this.voices = window.speechSynthesis.getVoices() || [];
             } catch (e) {
-                console.warn("SpeechManager getVoices notice:", e);
+                this.voices = [];
             }
         };
 
-        load();
-        if ("onvoiceschanged" in window.speechSynthesis) {
-            window.speechSynthesis.onvoiceschanged = () => load();
+        loadVoices();
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {
+            window.speechSynthesis.onvoiceschanged = loadVoices;
         }
-
-        // Periodic check for delayed browser voice hydration
-        setTimeout(load, 500);
-        setTimeout(load, 1500);
     }
 
     public setSpeaking(speaking: boolean): void {
         this.isSpeaking = speaking;
-        if (!speaking) {
-            this.clearKeepAlive();
+        if (!speaking && this.keepAliveTimer) {
+            clearInterval(this.keepAliveTimer);
+            this.keepAliveTimer = null;
         }
         if (this.onSpeakingStateChange) {
             this.onSpeakingStateChange(speaking);
@@ -57,238 +47,105 @@ export class SpeechManager {
     }
 
     /**
-     * Clean text of markdown, URLs, emojis, and special symbols for natural TTS speech
+     * Clean markdown, emojis, URLs, and code blocks for crisp speech delivery
      */
-    public sanitizeTextForSpeech(raw: string): string {
-        if (!raw) return "";
-        let text = raw;
-
-        // Remove markdown headers, bold, italics, code blocks
-        text = text.replace(/```[\s\S]*?```/g, " code block omitted. ");
-        text = text.replace(/`([^`]+)`/g, "$1");
-        text = text.replace(/[*#_~>]/g, "");
-        text = text.replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1");
-        text = text.replace(/https?:\/\/\S+/g, " link ");
-
-        // Remove bullet prefixes and decorative symbols
-        text = text.replace(/^[•\-\*]\s+/gm, "");
-        text = text.replace(/[🔥⚡🧠✨💡🐉🎙️💻📱📄🧩🌐🤝🎉]/g, "");
-
-        // Collapse multiple spaces & linebreaks into natural pauses
-        text = text.replace(/\n+/g, ". ");
-        text = text.replace(/\s{2,}/g, " ");
-
-        return text.trim();
+    private cleanTextForSpeech(text: string): string {
+        if (!text) return "";
+        return text
+            // Remove markdown links [text](url) -> text
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+            // Remove code blocks
+            .replace(/```[\s\S]*?```/g, "Code block omitted.")
+            .replace(/`([^`]+)`/g, "$1")
+            // Remove markdown bold/italic/headers
+            .replace(/[*#_~`>]/g, "")
+            // Remove emoji symbols for cleaner pronunciation
+            .replace(/[\u{1F300}-\u{1FAFF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{27BF}]/gu, "")
+            // Normalize spaces
+            .replace(/\s+/g, " ")
+            .trim();
     }
 
-    /**
-     * Select best matching voice for the target language mode
-     */
-    private findBestVoice(isHindi: boolean): SpeechSynthesisVoice | null {
-        if (!this.availableVoices || this.availableVoices.length === 0) {
-            this.availableVoices = window.speechSynthesis.getVoices() || [];
-        }
-
-        const voices = this.availableVoices;
-        if (!voices || voices.length === 0) return null;
-
-        if (isHindi) {
-            // 1. Exact Hindi Voice (Google / Microsoft Neural / Swara / Madhur / hi-IN)
-            const hiVoice = voices.find(v =>
-                v.lang.toLowerCase().startsWith("hi") ||
-                v.name.toLowerCase().includes("hindi") ||
-                v.name.toLowerCase().includes("swara") ||
-                v.name.toLowerCase().includes("madhur") ||
-                v.name.includes("हिन्दी")
-            );
-            if (hiVoice) return hiVoice;
-
-            // 2. Indian English voice as secondary for Hinglish
-            const inVoice = voices.find(v => v.lang.toLowerCase().includes("en-in") || v.name.toLowerCase().includes("india"));
-            if (inVoice) return inVoice;
-        } else {
-            // 1. Natural / Edge / Indian English / US English
-            const enInVoice = voices.find(v => v.lang.toLowerCase().includes("en-in") || v.name.toLowerCase().includes("neerja"));
-            if (enInVoice) return enInVoice;
-
-            const enVoice = voices.find(v =>
-                v.name.toLowerCase().includes("natural") ||
-                v.name.toLowerCase().includes("google") ||
-                v.name.toLowerCase().includes("jenny") ||
-                v.name.toLowerCase().includes("guy") ||
-                v.name.toLowerCase().includes("samantha") ||
-                v.lang.toLowerCase().startsWith("en")
-            );
-            if (enVoice) return enVoice;
-        }
-
-        // Fallback to default system voice
-        return voices.find(v => v.default) || voices[0] || null;
-    }
-
-    /**
-     * Speak text using Web Speech API with keepalive and audio fallback
-     */
     public speak(text: string, lang: string = "en-US"): void {
-        const cleanText = this.sanitizeTextForSpeech(text);
-        if (!cleanText) return;
+        if (!text || !text.trim()) return;
+        if (!("speechSynthesis" in window)) return;
 
-        this.stopSpeech();
-
-        const isHindi = (
-            lang === "hi" ||
-            lang === "hi-IN" ||
-            lang === "hindi_devanagari" ||
-            lang === "hinglish" ||
-            /[\u0900-\u097F]/.test(cleanText)
-        );
-
-        const targetLangCode = isHindi ? "hi-IN" : "en-US";
-
-        if (!("speechSynthesis" in window)) {
-            this.speakWithAudioFallback(cleanText, isHindi ? "hi" : "en");
-            return;
-        }
+        const spokenClean = this.cleanTextForSpeech(text);
+        if (!spokenClean) return;
 
         try {
-            // Unpause browser speech engine if blocked
+            // Cancel any ongoing utterance and unpause engine
+            window.speechSynthesis.cancel();
             if (window.speechSynthesis.paused) {
                 window.speechSynthesis.resume();
             }
 
-            // Create SpeechSynthesisUtterance
-            const utterance = new SpeechSynthesisUtterance(cleanText);
-            utterance.lang = targetLangCode;
-            utterance.rate = 1.0;
+            const utterance = new SpeechSynthesisUtterance(spokenClean);
+            const isHindi = (lang === "hi" || lang === "hi-IN" || lang === "hindi_devanagari" || lang === "hinglish");
+            utterance.lang = isHindi ? "hi-IN" : "en-US";
+            utterance.rate = 1.05;
             utterance.pitch = 1.0;
             utterance.volume = 1.0;
 
-            const bestVoice = this.findBestVoice(isHindi);
-            if (bestVoice) {
-                utterance.voice = bestVoice;
+            // Pick the best available voice
+            if (this.voices.length === 0) {
+                this.voices = window.speechSynthesis.getVoices() || [];
             }
 
-            let started = false;
+            if (this.voices.length > 0) {
+                if (isHindi) {
+                    const hiVoice = this.voices.find(v => v.lang.includes("hi") || v.name.toLowerCase().includes("hindi") || v.name.toLowerCase().includes("swara") || v.name.toLowerCase().includes("madhur") || v.name.toLowerCase().includes("india"));
+                    if (hiVoice) utterance.voice = hiVoice;
+                } else {
+                    const enVoice = this.voices.find(v => (v.lang === "en-IN" || v.lang === "en-US" || v.lang === "en-GB") && (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Neerja") || v.name.includes("Jenny") || v.name.includes("Samantha")));
+                    if (enVoice) utterance.voice = enVoice;
+                }
+            }
 
             utterance.onstart = () => {
-                started = true;
                 this.setSpeaking(true);
-                this.startKeepAlive();
+                // Chrome bug workaround for speech timeout on longer answers
+                if (this.keepAliveTimer) clearInterval(this.keepAliveTimer);
+                this.keepAliveTimer = setInterval(() => {
+                    if (window.speechSynthesis.speaking) {
+                        window.speechSynthesis.pause();
+                        window.speechSynthesis.resume();
+                    } else {
+                        clearInterval(this.keepAliveTimer);
+                        this.keepAliveTimer = null;
+                    }
+                }, 10000);
             };
 
             utterance.onend = () => {
                 this.setSpeaking(false);
             };
 
-            utterance.onerror = (err) => {
-                console.warn("SpeechSynthesis error:", err);
+            utterance.onerror = (e) => {
+                console.warn("SpeechSynthesis utterance notice:", e);
                 this.setSpeaking(false);
-                if (!started) {
-                    this.speakWithAudioFallback(cleanText, isHindi ? "hi" : "en");
-                }
             };
 
-            // Micro-delay workaround for Chromium speech cancel race condition
-            setTimeout(() => {
-                try {
-                    window.speechSynthesis.speak(utterance);
-
-                    // Timeout check if speech didn't start (browser autoplay restrictions)
-                    setTimeout(() => {
-                        if (!started && this.isSpeaking) {
-                            console.warn("SpeechSynthesis did not start, falling back to audio stream.");
-                            this.speakWithAudioFallback(cleanText, isHindi ? "hi" : "en");
-                        }
-                    }, 1200);
-                } catch (speakErr) {
-                    console.warn("speechSynthesis.speak error:", speakErr);
-                    this.speakWithAudioFallback(cleanText, isHindi ? "hi" : "en");
-                }
-            }, 60);
-
-        } catch (e) {
-            console.warn("SpeechManager speak notice:", e);
-            this.speakWithAudioFallback(cleanText, isHindi ? "hi" : "en");
-        }
-    }
-
-    /**
-     * Fallback Web Audio TTS for environments where SpeechSynthesis is restricted
-     */
-    private speakWithAudioFallback(text: string, langCode: string): void {
-        try {
-            if (this.fallbackAudio) {
-                this.fallbackAudio.pause();
-                this.fallbackAudio = null;
-            }
-
-            const shortText = text.slice(0, 160);
-            const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${langCode}&client=tw-ob&q=${encodeURIComponent(shortText)}`;
-
-            const audio = new Audio(ttsUrl);
-            this.fallbackAudio = audio;
-
-            audio.onplay = () => this.setSpeaking(true);
-            audio.onended = () => this.setSpeaking(false);
-            audio.onerror = () => this.setSpeaking(false);
-
-            const playPromise = audio.play();
-            if (playPromise !== undefined) {
-                playPromise.catch((e) => {
-                    console.warn("Audio TTS autoplay notice:", e);
-                    this.setSpeaking(false);
-                });
-            }
+            window.speechSynthesis.speak(utterance);
         } catch (err) {
-            console.warn("speakWithAudioFallback notice:", err);
+            console.warn("SpeechSynthesis speak exception:", err);
             this.setSpeaking(false);
-        }
-    }
-
-    /**
-     * Chromium keepalive workaround for long utterances (>10 seconds)
-     */
-    private startKeepAlive(): void {
-        this.clearKeepAlive();
-        this.keepAliveTimer = setInterval(() => {
-            if (!this.isSpeaking) {
-                this.clearKeepAlive();
-                return;
-            }
-            if ("speechSynthesis" in window) {
-                window.speechSynthesis.pause();
-                window.speechSynthesis.resume();
-            }
-        }, 8000);
-    }
-
-    private clearKeepAlive(): void {
-        if (this.keepAliveTimer) {
-            clearInterval(this.keepAliveTimer);
-            this.keepAliveTimer = null;
         }
     }
 
     public stopSpeech(): void {
         this.setSpeaking(false);
-
         if ("speechSynthesis" in window) {
             try {
                 window.speechSynthesis.cancel();
             } catch (e) {}
         }
-
-        if (this.fallbackAudio) {
-            try {
-                this.fallbackAudio.pause();
-                this.fallbackAudio = null;
-            } catch (e) {}
-        }
-
         if (window.eel && window.eel.stopSpeechOutput) {
             try {
                 window.eel.stopSpeechOutput();
-            } catch (e) {}
+            } catch (e) {
+                console.warn("stopSpeechOutput notice:", e);
+            }
         }
     }
 
@@ -297,7 +154,9 @@ export class SpeechManager {
         if (window.eel && window.eel.resetAssistantState) {
             try {
                 window.eel.resetAssistantState();
-            } catch (e) {}
+            } catch (e) {
+                console.warn("resetAssistantState notice:", e);
+            }
         }
     }
 }

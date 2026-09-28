@@ -354,14 +354,14 @@ export class AssistantApp {
                         ? "hi-IN-SwaraNeural"
                         : "en-IN-NeerjaNeural";
                     window.eel.testVoice(voice, lang.mode)();
-                } else {
-                    this.speechManager.speak(this.lastAssistantResponse, lang.mode);
+                } else if (window.eel && window.eel.allCommands) {
+                    window.eel.allCommands(this.lastAssistantResponse)();
                 }
             });
         }
     }
 
-    public displayActiveResponse(text: string, query?: string, langMode?: string): void {
+    public displayActiveResponse(text: string, query?: string, langMode?: string, autoSpeak: boolean = true): void {
         this.lastAssistantResponse = text;
         const card = document.getElementById("activeResponseCard");
         const queryEcho = document.getElementById("responseQueryEcho");
@@ -391,6 +391,11 @@ export class AssistantApp {
         // Show answer summary inside central orb
         const orbSummary = text.length > 60 ? text.slice(0, 57) + "…" : text;
         this.setMessageText(orbSummary);
+
+        // Automatically speak answers
+        if (autoSpeak) {
+            this.speechManager.speak(text, langMode);
+        }
     }
 
     public hideActiveResponse(): void {
