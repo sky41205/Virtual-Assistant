@@ -1,0 +1,2506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DRACARYS AI — Next-Gen Bilingual Autonomous Desktop Assistant</title>
+    <meta name="description" content="Experience Dracarys AI: The ultra-responsive, bilingual (English & Hindi) desktop AI assistant powered by Gemini & OpenAI, 3D dragon visualizer, OS automation, and 15+ skills.">
+    <meta name="keywords" content="AI Assistant, Python AI, Voice Assistant, Gemini AI, Desktop Automation, Hindi AI, Speech Recognition, Eel Python">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="www/assets/img/sophia.ico">
+    <link rel="shortcut icon" href="www/assets/img/sophia.ico">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap Icons & FontAwesome -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Three.js CDN for 3D Particle & Fire Canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <style>
+        :root {
+            --bg-base: #060810;
+            --bg-card: rgba(15, 20, 35, 0.7);
+            --bg-card-hover: rgba(22, 30, 52, 0.85);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(255, 107, 0, 0.3);
+            
+            --primary: #ff5500;
+            --primary-glow: #ff7700;
+            --primary-rgb: 255, 85, 0;
+            --cyan: #00f0ff;
+            --cyan-glow: #00f0ff;
+            --cyan-rgb: 0, 240, 255;
+            --emerald: #00ff88;
+            --purple: #a855f7;
+            
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --text-dim: #6b7280;
+
+            --font-main: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --font-body: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        /* Themes */
+        [data-theme="cyan"] {
+            --primary: #00f0ff;
+            --primary-glow: #00c8ff;
+            --primary-rgb: 0, 240, 255;
+            --border-glow: rgba(0, 240, 255, 0.3);
+        }
+        [data-theme="emerald"] {
+            --primary: #00ff88;
+            --primary-glow: #00dd77;
+            --primary-rgb: 0, 255, 136;
+            --border-glow: rgba(0, 255, 136, 0.3);
+        }
+        [data-theme="purple"] {
+            --primary: #c084fc;
+            --primary-glow: #a855f7;
+            --primary-rgb: 192, 132, 252;
+            --border-glow: rgba(192, 132, 252, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            font-size: 16px;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            overflow-x: hidden;
+            line-height: 1.6;
+            position: relative;
+        }
+
+        /* Ambient Glow & Canvas */
+        #bgCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .ambient-aurora {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            filter: blur(140px);
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 0;
+            transition: background 0.5s ease;
+        }
+        .aurora-1 {
+            top: -100px;
+            left: 10%;
+            background: radial-gradient(circle, rgba(var(--primary-rgb), 0.8), transparent 70%);
+        }
+        .aurora-2 {
+            top: 40%;
+            right: 5%;
+            background: radial-gradient(circle, rgba(var(--cyan-rgb), 0.6), transparent 70%);
+        }
+        .aurora-3 {
+            bottom: 5%;
+            left: 20%;
+            background: radial-gradient(circle, rgba(168, 85, 247, 0.5), transparent 70%);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 0 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-main);
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.02em;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #ffffff 0%, #ff8844 50%, var(--primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-block;
+        }
+        [data-theme="cyan"] .gradient-text {
+            background: linear-gradient(135deg, #ffffff 0%, #70e6ff 50%, var(--primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        [data-theme="emerald"] .gradient-text {
+            background: linear-gradient(135deg, #ffffff 0%, #80ffbe 50%, var(--primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        [data-theme="purple"] .gradient-text {
+            background: linear-gradient(135deg, #ffffff 0%, #e9d5ff 50%, var(--primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .mono {
+            font-family: var(--font-mono);
+        }
+
+        /* Glassmorphism Cards */
+        .glass-panel {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .glass-panel:hover {
+            border-color: rgba(var(--primary-rgb), 0.4);
+            box-shadow: 0 25px 50px -12px rgba(var(--primary-rgb), 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+
+        /* Navigation */
+        header.site-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            background: rgba(6, 8, 16, 0.75);
+            border-bottom: 1px solid var(--border-glass);
+            transition: all 0.3s ease;
+        }
+
+        .nav-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 76px;
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: #fff;
+            font-family: var(--font-main);
+            font-weight: 800;
+            font-size: 1.4rem;
+            letter-spacing: 0.05em;
+        }
+
+        .brand-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--primary), #ff2200);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 1.15rem;
+            box-shadow: 0 0 20px rgba(var(--primary-rgb), 0.6);
+            transition: transform 0.3s ease;
+        }
+        .brand-logo:hover .brand-icon {
+            transform: scale(1.08) rotate(5deg);
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.2s ease;
+            position: relative;
+        }
+        .nav-links a:hover {
+            color: #ffffff;
+        }
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 0;
+            width: 0%;
+            height: 2px;
+            background: var(--primary);
+            transition: width 0.25s ease;
+        }
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-family: var(--font-main);
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            border: 1px solid transparent;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), #e63900);
+            color: #ffffff;
+            box-shadow: 0 4px 20px rgba(var(--primary-rgb), 0.4);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(var(--primary-rgb), 0.6);
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--border-glass);
+            color: var(--text-main);
+            backdrop-filter: blur(10px);
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            border-radius: 9px;
+        }
+
+        .btn-glow {
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-glow::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent);
+            transform: rotate(45deg);
+            animation: glowSweep 4s infinite linear;
+        }
+        @keyframes glowSweep {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        /* Theme Switcher */
+        .theme-picker {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 4px 6px;
+            border-radius: 20px;
+            border: 1px solid var(--border-glass);
+        }
+        .theme-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .theme-dot:hover {
+            transform: scale(1.2);
+        }
+        .theme-dot.active {
+            border-color: #fff;
+            transform: scale(1.15);
+        }
+        .dot-fire { background: #ff5500; }
+        .dot-cyan { background: #00f0ff; }
+        .dot-emerald { background: #00ff88; }
+        .dot-purple { background: #a855f7; }
+
+        /* HERO SECTION */
+        .hero-section {
+            padding: 160px 0 100px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 18px;
+            background: rgba(var(--primary-rgb), 0.1);
+            border: 1px solid rgba(var(--primary-rgb), 0.3);
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 24px;
+            box-shadow: 0 0 20px rgba(var(--primary-rgb), 0.15);
+        }
+        .badge-pulse {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary);
+            box-shadow: 0 0 10px var(--primary);
+            animation: pulseDot 2s infinite ease-in-out;
+        }
+        @keyframes pulseDot {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.6; }
+        }
+
+        .hero-title {
+            font-size: 3.8rem;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            font-weight: 800;
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            margin-bottom: 36px;
+            max-width: 580px;
+            line-height: 1.65;
+        }
+
+        .hero-cta-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 48px;
+        }
+
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-glass);
+        }
+
+        .stat-item h4 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+        .stat-item h4 span {
+            color: var(--primary);
+            font-size: 1.2rem;
+        }
+        .stat-item p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 600;
+        }
+
+        /* HERO INTERACTIVE ORB MOCKUP */
+        .hero-mockup-wrapper {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .orb-stage-card {
+            width: 100%;
+            max-width: 440px;
+            padding: 36px 28px;
+            display: flex;
+            flex-column: column;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            background: radial-gradient(circle at 50% 30%, rgba(25, 35, 60, 0.8), rgba(10, 14, 26, 0.95));
+            border: 1px solid rgba(var(--primary-rgb), 0.25);
+            box-shadow: 0 30px 60px -15px rgba(0,0,0,0.8), 0 0 50px rgba(var(--primary-rgb), 0.15);
+        }
+
+        .stage-orb-container {
+            position: relative;
+            width: 220px;
+            height: 220px;
+            margin: 0 auto 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .stage-orb-aura {
+            position: absolute;
+            inset: -20px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(var(--primary-rgb), 0.4), transparent 70%);
+            animation: orbAuraPulse 3s ease-in-out infinite;
+        }
+        @keyframes orbAuraPulse {
+            0%, 100% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.15); opacity: 0.9; }
+        }
+
+        .stage-orb-sphere {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.2) 0%, rgba(var(--primary-rgb),0.8) 40%, #080d1a 90%);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            box-shadow: inset 0 0 30px rgba(var(--primary-rgb), 0.8), 0 0 40px rgba(var(--primary-rgb), 0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .stage-orb-sphere:hover {
+            transform: scale(1.05);
+        }
+
+        .stage-orb-wave {
+            width: 160px;
+            height: 50px;
+        }
+
+        .stage-orb-text {
+            font-size: 0.85rem;
+            color: #ffffff;
+            font-weight: 600;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+            margin-top: 4px;
+        }
+
+        .orb-status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--border-glass);
+            border-radius: 30px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        .mockup-prompts-tray {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+            text-align: left;
+        }
+        .mock-prompt-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-glass);
+            border-radius: 10px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .mock-prompt-btn:hover {
+            background: rgba(var(--primary-rgb), 0.12);
+            border-color: rgba(var(--primary-rgb), 0.4);
+            color: #fff;
+            transform: translateX(4px);
+        }
+        .mock-prompt-btn i {
+            color: var(--primary);
+        }
+
+        /* SECTION COMMON */
+        section {
+            padding: 110px 0;
+            position: relative;
+        }
+
+        .section-header {
+            text-align: center;
+            max-width: 720px;
+            margin: 0 auto 64px;
+        }
+        .section-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 12px;
+        }
+        .section-title {
+            font-size: 2.8rem;
+            margin-bottom: 18px;
+            line-height: 1.2;
+        }
+        .section-desc {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        /* INTERACTIVE SIMULATOR / PLAYGROUND SECTION */
+        .simulator-section {
+            background: linear-gradient(180deg, transparent 0%, rgba(10, 14, 28, 0.8) 50%, transparent 100%);
+        }
+
+        .simulator-card {
+            border-radius: 24px;
+            padding: 40px;
+            background: rgba(12, 16, 30, 0.85);
+            border: 1px solid rgba(var(--primary-rgb), 0.2);
+            box-shadow: 0 25px 60px -15px rgba(0,0,0,0.9);
+        }
+
+        .sim-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 36px;
+            align-items: center;
+        }
+
+        .sim-console {
+            background: #04060c;
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+        }
+
+        .sim-console-header {
+            background: #090d18;
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-glass);
+        }
+
+        .console-dots {
+            display: flex;
+            gap: 6px;
+        }
+        .console-dots span {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .dot-r { background: #ff5f56; }
+        .dot-y { background: #ffbd2e; }
+        .dot-g { background: #27c93f; }
+
+        .sim-screen {
+            padding: 24px;
+            min-height: 280px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .sim-query-box {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            color: #fff;
+            flex-shrink: 0;
+        }
+        .user-text {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            color: #fff;
+            border: 1px solid var(--border-glass);
+        }
+
+        .sim-response-box {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .ai-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--primary), #ff2200);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            color: #fff;
+            flex-shrink: 0;
+            box-shadow: 0 0 12px rgba(var(--primary-rgb), 0.5);
+        }
+        .ai-text-bubble {
+            background: rgba(var(--primary-rgb), 0.08);
+            border: 1px solid rgba(var(--primary-rgb), 0.25);
+            padding: 14px 18px;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            color: #e5e7eb;
+            line-height: 1.55;
+            position: relative;
+        }
+
+        .sim-audio-wave {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            height: 24px;
+            margin-top: 10px;
+        }
+        .wave-bar {
+            width: 3px;
+            background: var(--primary);
+            border-radius: 2px;
+            animation: waveBounce 1.2s infinite ease-in-out;
+        }
+        .wave-bar:nth-child(1) { height: 8px; animation-delay: 0.1s; }
+        .wave-bar:nth-child(2) { height: 18px; animation-delay: 0.3s; }
+        .wave-bar:nth-child(3) { height: 24px; animation-delay: 0.2s; }
+        .wave-bar:nth-child(4) { height: 12px; animation-delay: 0.4s; }
+        .wave-bar:nth-child(5) { height: 20px; animation-delay: 0.15s; }
+        .wave-bar:nth-child(6) { height: 10px; animation-delay: 0.35s; }
+        @keyframes waveBounce {
+            0%, 100% { transform: scaleY(0.4); }
+            50% { transform: scaleY(1); }
+        }
+
+        .sim-input-dock {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: #090d18;
+            border-top: 1px solid var(--border-glass);
+        }
+        .sim-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #fff;
+            font-size: 0.95rem;
+            font-family: var(--font-body);
+        }
+        .sim-mic-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(var(--primary-rgb), 0.15);
+            border: 1px solid rgba(var(--primary-rgb), 0.4);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .sim-mic-btn:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .sim-controls-panel h3 {
+            font-size: 1.8rem;
+            margin-bottom: 12px;
+        }
+        .sim-controls-panel p {
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .sim-preset-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 28px;
+        }
+        .sim-chip {
+            padding: 8px 14px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .sim-chip:hover, .sim-chip.active {
+            background: rgba(var(--primary-rgb), 0.15);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        /* BENTO GRID FEATURES */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+        }
+
+        .bento-card {
+            padding: 36px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .col-span-8 { grid-column: span 8; }
+        .col-span-4 { grid-column: span 4; }
+        .col-span-6 { grid-column: span 6; }
+        .col-span-12 { grid-column: span 12; }
+
+        .bento-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: rgba(var(--primary-rgb), 0.12);
+            border: 1px solid rgba(var(--primary-rgb), 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-size: 1.4rem;
+            margin-bottom: 24px;
+        }
+
+        .bento-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 12px;
+        }
+        .bento-card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .bento-visual {
+            margin-top: 24px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-glass);
+            padding: 16px;
+        }
+
+        /* SKILLS CATALOG SECTION */
+        .skills-filter-bar {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 40px;
+        }
+        .skill-filter-btn {
+            padding: 8px 18px;
+            border-radius: 30px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-glass);
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .skill-filter-btn:hover, .skill-filter-btn.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .skill-card {
+            padding: 24px;
+            border-radius: 16px;
+            transition: all 0.25s ease;
+        }
+        .skill-card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .skill-icon {
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+        .skill-badge {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-dim);
+            font-weight: 600;
+        }
+        .skill-card h4 {
+            font-size: 1.15rem;
+            margin-bottom: 8px;
+        }
+        .skill-card p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+            line-height: 1.5;
+        }
+        .skill-trigger-tag {
+            font-size: 0.78rem;
+            color: var(--cyan);
+            background: rgba(0, 240, 255, 0.08);
+            padding: 4px 10px;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        /* ARCHITECTURE & WORKFLOW */
+        .arch-flow-wrapper {
+            padding: 48px;
+            border-radius: 24px;
+        }
+        .arch-steps-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+            position: relative;
+        }
+        .arch-step-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            position: relative;
+        }
+        .step-num {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: #fff;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 0.9rem;
+        }
+        .arch-step-card h4 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+        .arch-step-card p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* COMPARISON TABLE */
+        .comparison-table-wrapper {
+            overflow-x: auto;
+            border-radius: 20px;
+            border: 1px solid var(--border-glass);
+        }
+        .comp-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+        .comp-table th, .comp-table td {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border-glass);
+        }
+        .comp-table th {
+            background: rgba(10, 14, 28, 0.9);
+            color: #fff;
+            font-family: var(--font-main);
+            font-weight: 700;
+        }
+        .comp-table th.highlight-col, .comp-table td.highlight-col {
+            background: rgba(var(--primary-rgb), 0.08);
+            border-left: 1px solid rgba(var(--primary-rgb), 0.2);
+            border-right: 1px solid rgba(var(--primary-rgb), 0.2);
+        }
+        .comp-check {
+            color: var(--emerald);
+            font-size: 1.1rem;
+        }
+        .comp-cross {
+            color: #ef4444;
+            font-size: 1.1rem;
+        }
+
+        /* INSTALLATION & CODE SNIPPETS */
+        .install-tab-container {
+            border-radius: 20px;
+            overflow: hidden;
+        }
+        .install-nav {
+            display: flex;
+            background: #090d18;
+            border-bottom: 1px solid var(--border-glass);
+        }
+        .install-tab-btn {
+            padding: 14px 24px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-family: var(--font-main);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+        }
+        .install-tab-btn.active {
+            color: #fff;
+            border-bottom-color: var(--primary);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .code-block {
+            background: #04060c;
+            padding: 24px;
+            position: relative;
+        }
+        .code-block pre {
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            color: #e2e8f0;
+            overflow-x: auto;
+            line-height: 1.7;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border-glass);
+            border-radius: 8px;
+            color: var(--text-muted);
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .copy-btn:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        /* FAQ ACCORDION */
+        .faq-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .faq-item {
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .faq-question {
+            padding: 22px 28px;
+            font-family: var(--font-main);
+            font-weight: 600;
+            font-size: 1.15rem;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+        }
+        .faq-question i {
+            transition: transform 0.3s ease;
+            color: var(--primary);
+        }
+        .faq-answer {
+            padding: 0 28px 24px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            display: none;
+        }
+        .faq-item.active .faq-question i {
+            transform: rotate(180deg);
+        }
+        .faq-item.active .faq-answer {
+            display: block;
+        }
+
+        /* CTA BANNER */
+        .cta-banner {
+            padding: 70px 48px;
+            border-radius: 30px;
+            background: radial-gradient(circle at 50% 50%, rgba(var(--primary-rgb), 0.2), rgba(12, 16, 32, 0.95));
+            border: 1px solid rgba(var(--primary-rgb), 0.4);
+            text-align: center;
+            box-shadow: 0 30px 80px -20px rgba(var(--primary-rgb), 0.3);
+        }
+
+        /* FOOTER */
+        footer.site-footer {
+            border-top: 1px solid var(--border-glass);
+            background: #04060b;
+            padding: 80px 0 40px;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1.5fr;
+            gap: 48px;
+            margin-bottom: 60px;
+        }
+
+        .footer-brand p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 16px;
+            line-height: 1.6;
+            max-width: 320px;
+        }
+
+        .footer-col h5 {
+            font-size: 1rem;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+        .footer-col ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .footer-col a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        .footer-col a:hover {
+            color: var(--primary);
+        }
+
+        .footer-bottom {
+            padding-top: 30px;
+            border-top: 1px solid var(--border-glass);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--text-dim);
+            font-size: 0.85rem;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 1024px) {
+            .hero-grid { grid-template-columns: 1fr; text-align: center; }
+            .hero-subtitle { margin: 0 auto 36px; }
+            .hero-cta-group { justify-content: center; }
+            .hero-stats { grid-template-columns: repeat(2, 1fr); }
+            .sim-grid { grid-template-columns: 1fr; }
+            .bento-card.col-span-8, .bento-card.col-span-4, .bento-card.col-span-6 { grid-column: span 12; }
+            .arch-steps-grid { grid-template-columns: repeat(2, 1fr); }
+            .footer-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .hero-title { font-size: 2.5rem; }
+            .section-title { font-size: 2.1rem; }
+            .arch-steps-grid { grid-template-columns: 1fr; }
+            .footer-grid { grid-template-columns: 1fr; }
+            .footer-bottom { flex-direction: column; gap: 16px; text-align: center; }
+        }
+    </style>
+</head>
+<body data-theme="fire">
+
+    <!-- WebGL Particle Canvas -->
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- Ambient Glow Auras -->
+    <div class="ambient-aurora aurora-1"></div>
+    <div class="ambient-aurora aurora-2"></div>
+    <div class="ambient-aurora aurora-3"></div>
+
+    <!-- ==================== HEADER & NAVBAR ==================== -->
+    <header class="site-header">
+        <div class="container">
+            <nav class="nav-wrapper">
+                <a href="#hero" class="brand-logo">
+                    <div class="brand-icon">
+                        <i class="fa-solid fa-dragon"></i>
+                    </div>
+                    <span>DRACARYS <span style="color:var(--primary); font-size: 0.85rem; font-weight:700;">AI</span></span>
+                </a>
+
+                <ul class="nav-links">
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#skills">15+ Skills</a></li>
+                    <li><a href="#simulator">Live Playground</a></li>
+                    <li><a href="#architecture">Architecture</a></li>
+                    <li><a href="#quickstart">Quickstart</a></li>
+                    <li><a href="#faq">FAQ</a></li>
+                </ul>
+
+                <div class="nav-actions">
+                    <!-- Theme Selector -->
+                    <div class="theme-picker" title="Switch Color Theme">
+                        <div class="theme-dot dot-fire active" onclick="setTheme('fire')"></div>
+                        <div class="theme-dot dot-cyan" onclick="setTheme('cyan')"></div>
+                        <div class="theme-dot dot-emerald" onclick="setTheme('emerald')"></div>
+                        <div class="theme-dot dot-purple" onclick="setTheme('purple')"></div>
+                    </div>
+
+                    <a href="https://github.com/MrAliHasan/Sophia-AI-Assistant" target="_blank" class="btn btn-secondary btn-sm">
+                        <i class="fa-brands fa-github"></i>
+                        <span>GitHub</span>
+                    </a>
+
+                    <a href="#quickstart" class="btn btn-primary btn-sm btn-glow">
+                        <i class="bi bi-terminal-fill"></i>
+                        <span>Launch App</span>
+                    </a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- ==================== HERO SECTION ==================== -->
+    <section id="hero" class="hero-section">
+        <div class="container">
+            <div class="hero-grid">
+                
+                <!-- Left Hero Content -->
+                <div class="hero-content">
+                    <div class="hero-badge">
+                        <span class="badge-pulse"></span>
+                        <span>DRACARYS 2.0 &bull; BILINGUAL DESKTOP & VOICE AI</span>
+                    </div>
+
+                    <h1 class="hero-title">
+                        Your Autonomous <br>
+                        <span class="gradient-text">AI Desktop Copilot</span><br>
+                        with Voice & Vision
+                    </h1>
+
+                    <p class="hero-subtitle">
+                        Seamlessly bridge hands-free voice intelligence, full OS automation, multi-format RAG document querying, and ultra-natural bilingual speech in English &amp; हिन्दी (Hindi). Zero cloud lock-in, lightning-fast Eel WebSocket IPC.
+                    </p>
+
+                    <div class="hero-cta-group">
+                        <a href="#simulator" class="btn btn-primary btn-glow">
+                            <i class="fa-solid fa-play"></i>
+                            <span>Test Live Simulator</span>
+                        </a>
+                        <a href="#quickstart" class="btn btn-secondary">
+                            <i class="bi bi-download"></i>
+                            <span>Clone &amp; Run Locally</span>
+                        </a>
+                        <a href="https://www.youtube.com/playlist?list=PLoGk-8pBKSRVWvGN372yBzrF15tSv22KY" target="_blank" class="btn btn-secondary" title="Watch YouTube Tutorial">
+                            <i class="fa-brands fa-youtube" style="color: #ff0000;"></i>
+                            <span>Tutorial Series</span>
+                        </a>
+                    </div>
+
+                    <div class="hero-stats">
+                        <div class="stat-item">
+                            <h4>&lt; 20<span>ms</span></h4>
+                            <p>IPC Latency</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>15<span>+</span></h4>
+                            <p>Built-in Skills</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>100<span>%</span></h4>
+                            <p>Bilingual (EN/HI)</p>
+                        </div>
+                        <div class="stat-item">
+                            <h4>3D</h4>
+                            <p>Dragon Canvas</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Hero AI Orb Mockup -->
+                <div class="hero-mockup-wrapper">
+                    <div class="glass-panel orb-stage-card">
+                        
+                        <div class="orb-status-pill">
+                            <span class="badge-pulse"></span>
+                            <span>Neural Core Active &bull; Madhur / Swara Neural</span>
+                        </div>
+
+                        <!-- Glowing Interactive Orb -->
+                        <div class="stage-orb-container" onclick="triggerHeroOrbPulse()" title="Click Orb to Speak!">
+                            <div class="stage-orb-aura"></div>
+                            <div class="stage-orb-sphere" id="heroOrbSphere">
+                                <canvas id="heroSineCanvas" class="stage-orb-wave"></canvas>
+                                <div class="stage-orb-text" id="heroOrbText">"Sophia / Dracarys"</div>
+                            </div>
+                        </div>
+
+                        <div class="mockup-prompts-tray">
+                            <div class="mock-prompt-btn" onclick="runSimulatedQuery('Open YouTube and play Interstellar theme')">
+                                <span><i class="bi bi-youtube me-2"></i>"Open YouTube and play music..."</span>
+                                <i class="bi bi-arrow-right-short"></i>
+                            </div>
+                            <div class="mock-prompt-btn" onclick="runSimulatedQuery('Ali ko WhatsApp par message bhejo ki meeting 4 baje hai')">
+                                <span><i class="bi bi-whatsapp me-2"></i>"Ali ko WhatsApp message bhejo..."</span>
+                                <i class="bi bi-arrow-right-short"></i>
+                            </div>
+                            <div class="mock-prompt-btn" onclick="runSimulatedQuery('Summarize my quarterly earnings financial PDF document')">
+                                <span><i class="bi bi-file-earmark-pdf me-2"></i>"Summarize quarterly PDF..."</span>
+                                <i class="bi bi-arrow-right-short"></i>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== INTERACTIVE SIMULATOR / PLAYGROUND ==================== -->
+    <section id="simulator" class="simulator-section">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-tag">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>Interactive Testbench</span>
+                </div>
+                <h2 class="section-title">Experience Dracarys In Real-Time</h2>
+                <p class="section-desc">
+                    Try voice commands, test bilingual responses in Hindi &amp; English, and see how the autonomous intent engine resolves queries instantly.
+                </p>
+            </div>
+
+            <div class="simulator-card glass-panel">
+                <div class="sim-grid">
+                    
+                    <!-- Left: Interactive Controls -->
+                    <div class="sim-controls-panel">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge" style="background:rgba(var(--primary-rgb),0.2); color:var(--primary); padding:4px 10px; border-radius:6px; font-weight:700;">LIVE ENGINE</span>
+                            <span class="text-muted small">Gemini 3.5 Flash-Lite &amp; Neural TTS</span>
+                        </div>
+                        <h3>Interactive Assistant Playground</h3>
+                        <p>Click any quick prompt below or type your own question to trigger real-time AI generation, animated waveforms, and voice synthesis.</p>
+
+                        <div class="sim-preset-chips">
+                            <div class="sim-chip active" onclick="runSimulatedQuery('Open YouTube and search latest AI agent tutorials')">
+                                <i class="bi bi-youtube text-danger"></i> YouTube Search
+                            </div>
+                            <div class="sim-chip" onclick="runSimulatedQuery('Ali Hassan ko WhatsApp message bhejo: Main 10 minute me call karta hu')">
+                                <i class="bi bi-whatsapp text-success"></i> WhatsApp (Hindi)
+                            </div>
+                            <div class="sim-chip" onclick="runSimulatedQuery('Analyze document: Find high risks in contract.pdf')">
+                                <i class="bi bi-file-earmark-text text-info"></i> Document RAG
+                            </div>
+                            <div class="sim-chip" onclick="runSimulatedQuery('What is the weather in Delhi and calculate 2400 * 18% GST?')">
+                                <i class="bi bi-calculator text-warning"></i> Weather &amp; Math
+                            </div>
+                            <div class="sim-chip" onclick="runSimulatedQuery('Dracarys! Unleash dragon fire mode!')">
+                                <i class="bi bi-fire text-danger"></i> Dracarys Fire Mode
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-3">
+                            <button id="btnPlaySimVoice" class="btn btn-primary btn-sm" onclick="speakCurrentResponse()">
+                                <i class="bi bi-volume-up-fill"></i>
+                                <span>Speak Response Audio</span>
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="clearSimConsole()">
+                                <i class="bi bi-arrow-clockwise"></i>
+                                <span>Reset Console</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right: Virtual Console -->
+                    <div class="sim-console">
+                        <div class="sim-console-header">
+                            <div class="console-dots">
+                                <span class="dot-r"></span>
+                                <span class="dot-y"></span>
+                                <span class="dot-g"></span>
+                            </div>
+                            <span class="mono text-muted" style="font-size:0.75rem;">DRACARYS_IPC_SESSION_v2.0</span>
+                            <span class="badge" style="background:#10b981; font-size:0.65rem; color:#000; font-weight:700;">CONNECTED</span>
+                        </div>
+
+                        <div class="sim-screen" id="simScreen">
+                            <div class="sim-query-box">
+                                <div class="user-avatar"><i class="bi bi-person-fill"></i></div>
+                                <div class="user-text" id="simQueryEcho">"Open YouTube and search latest AI agent tutorials"</div>
+                            </div>
+
+                            <div class="sim-response-box">
+                                <div class="ai-avatar"><i class="fa-solid fa-dragon"></i></div>
+                                <div class="ai-text-bubble">
+                                    <div id="simResponseText">Opening YouTube in your browser and searching for the latest AI agent tutorials now...</div>
+                                    <div class="sim-audio-wave" id="simAudioWave">
+                                        <div class="wave-bar"></div>
+                                        <div class="wave-bar"></div>
+                                        <div class="wave-bar"></div>
+                                        <div class="wave-bar"></div>
+                                        <div class="wave-bar"></div>
+                                        <div class="wave-bar"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sim-input-dock">
+                            <button class="sim-mic-btn" id="simMicBtn" onclick="toggleSimMic()" title="Test Web Voice Input">
+                                <i class="bi bi-mic-fill"></i>
+                            </button>
+                            <input type="text" id="simCustomInput" class="sim-input" placeholder="Ask Dracarys anything in English or हिन्दी..." onkeydown="handleSimEnter(event)">
+                            <button class="btn btn-primary btn-sm" style="padding: 6px 14px; border-radius: 8px;" onclick="submitCustomSim()">
+                                <i class="bi bi-send-fill"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== CORE FEATURES (BENTO GRID) ==================== -->
+    <section id="features">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-tag">
+                    <i class="bi bi-stars"></i>
+                    <span>Next-Gen Capabilities</span>
+                </div>
+                <h2 class="section-title">Engineered for Seamless Autonomy</h2>
+                <p class="section-desc">
+                    Built from the ground up with high performance, multilingual intelligence, and deep OS integration.
+                </p>
+            </div>
+
+            <div class="bento-grid">
+                
+                <!-- Feature 1: Bilingual Intelligence (Large) -->
+                <div class="bento-card glass-panel col-span-8">
+                    <div>
+                        <div class="bento-icon">
+                            <i class="fa-solid fa-language"></i>
+                        </div>
+                        <h3>Bilingual Hindi &amp; English Neural Intelligence</h3>
+                        <p>Automatic language detection and dynamic code-switching between pure Hindi (हिंदी), Hinglish, and English. Powered by Microsoft Azure Neural voices (Madhur &amp; Swara) for human-like intonation.</p>
+                    </div>
+                    <div class="bento-visual">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="mono text-info" style="font-size:0.8rem;">[NLP] Detected: Hindi-IN / Hinglish</span>
+                            <span class="badge bg-success" style="font-size:0.7rem;">Confidence 99.4%</span>
+                        </div>
+                        <div class="p-2 rounded" style="background:rgba(255,255,255,0.03); font-size:0.85rem;">
+                            <strong>User:</strong> "Sophia, kal subah 9 baje team meeting ka reminder set kar do"<br>
+                            <strong>Dracarys:</strong> "ज़रूर! कल सुबह 9:00 AM पर आपकी टीम मीटिंग का रिमाइंडर सेट कर दिया गया है।"
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature 2: 3D Dragon & Hologram Engine -->
+                <div class="bento-card glass-panel col-span-4">
+                    <div>
+                        <div class="bento-icon" style="color:#ff3300; background:rgba(255,51,0,0.12);">
+                            <i class="fa-solid fa-fire"></i>
+                        </div>
+                        <h3>3D WebGL Dragonfire &amp; Orb HUD</h3>
+                        <p>GPU-accelerated interactive 3D particle canvas and dynamic audio-reactive sine visualizers that breathe fire on wake commands.</p>
+                    </div>
+                    <div class="bento-visual text-center py-3">
+                        <i class="fa-solid fa-dragon fa-3x" style="color:var(--primary); animation: pulseDot 2s infinite ease-in-out;"></i>
+                        <div class="mono text-muted small mt-2">Dracarys Particle FX Engine</div>
+                    </div>
+                </div>
+
+                <!-- Feature 3: Full OS & System Automation -->
+                <div class="bento-card glass-panel col-span-4">
+                    <div>
+                        <div class="bento-icon" style="color:var(--cyan); background:rgba(0,240,255,0.12);">
+                            <i class="fa-solid fa-desktop"></i>
+                        </div>
+                        <h3>Autonomous OS &amp; App Automation</h3>
+                        <p>Launch desktop apps (VS Code, Chrome, Notepad), adjust brightness &amp; volume, manage processes, take screenshots, and toggle system states hands-free.</p>
+                    </div>
+                    <div class="bento-visual">
+                        <div class="mono small text-muted">
+                            &gt; system.launch("notepad.exe") <span class="text-success">[OK]</span><br>
+                            &gt; audio.set_volume(80) <span class="text-success">[OK]</span><br>
+                            &gt; os.capture_screen() <span class="text-success">[SAVED]</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature 4: RAG Multi-Format Document Analyzer -->
+                <div class="bento-card glass-panel col-span-4">
+                    <div>
+                        <div class="bento-icon" style="color:var(--emerald); background:rgba(0,255,136,0.12);">
+                            <i class="fa-solid fa-file-invoice"></i>
+                        </div>
+                        <h3>RAG Multi-Format Document AI</h3>
+                        <p>Instant file ingestion for PDF, DOCX, TXT, CSV, JSON, and Markdown with contextual summarization, risk detection, and Q&amp;A querying.</p>
+                    </div>
+                    <div class="bento-visual">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-file-earmark-pdf text-danger fs-4"></i>
+                            <div class="small">
+                                <div><strong>Annual_Report_2026.pdf</strong></div>
+                                <div class="text-muted" style="font-size:0.75rem;">Parsed 42 pages in 140ms</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature 5: Smart Communication Suite -->
+                <div class="bento-card glass-panel col-span-4">
+                    <div>
+                        <div class="bento-icon" style="color:#25d366; background:rgba(37,211,102,0.12);">
+                            <i class="fa-brands fa-whatsapp"></i>
+                        </div>
+                        <h3>WhatsApp &amp; Phone Calling Suite</h3>
+                        <p>Send messages, initiate WhatsApp voice/video calls, and lookup contact lists with fuzzy name matching and automatic message templates.</p>
+                    </div>
+                    <div class="bento-visual">
+                        <div class="d-flex align-items-center justify-content-between small">
+                            <span><i class="bi bi-check2-all text-success me-1"></i> "Message delivered to Ali"</span>
+                            <span class="badge bg-secondary">WhatsApp Web</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature 6: Dual LLM Architecture -->
+                <div class="bento-card glass-panel col-span-12">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center">
+                        <div style="max-width:650px;">
+                            <div class="bento-icon">
+                                <i class="fa-solid fa-microchip"></i>
+                            </div>
+                            <h3>Hybrid Dual-Engine: Google Gemini 3.5 &amp; OpenAI GPT-4o</h3>
+                            <p>Pre-warmed background worker clients ensure zero cold-start delay. Switch seamlessly between Gemini and OpenAI models on the fly with automatic rate-limit fallbacks.</p>
+                        </div>
+                        <div class="d-flex gap-3 mt-3 mt-md-0">
+                            <div class="p-3 rounded-3 text-center" style="background:rgba(255,255,255,0.03); border:1px solid var(--border-glass); min-width:140px;">
+                                <i class="fa-brands fa-google text-primary fs-3 mb-2"></i>
+                                <div class="small fw-bold">Gemini 3.5 Flash</div>
+                                <div class="text-muted" style="font-size:0.75rem;">Default Provider</div>
+                            </div>
+                            <div class="p-3 rounded-3 text-center" style="background:rgba(255,255,255,0.03); border:1px solid var(--border-glass); min-width:140px;">
+                                <i class="fa-solid fa-bolt text-warning fs-3 mb-2"></i>
+                                <div class="small fw-bold">OpenAI GPT-4o</div>
+                                <div class="text-muted" style="font-size:0.75rem;">Fallback Provider</div>
+                            </div>
+                            <div class="p-3 rounded-3 text-center" style="background:rgba(255,255,255,0.03); border:1px solid var(--border-glass); min-width:140px;">
+                                <i class="fa-solid fa-database text-info fs-3 mb-2"></i>
+                                <div class="small fw-bold">SQLite Memory</div>
+                                <div class="text-muted" style="font-size:0.75rem;">Local History &amp; DB</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== 15+ SKILLS EXPLORER ==================== -->
+    <section id="skills" style="background: linear-gradient(180deg, transparent 0%, rgba(8, 12, 24, 0.7) 50%, transparent 100%);">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-tag">
+                    <i class="fa-solid fa-cube"></i>
+                    <span>Extensible Ecosystem</span>
+                </div>
+                <h2 class="section-title">15+ Modular Skill Engines</h2>
+                <p class="section-desc">
+                    Each skill operates as an isolated, high-performance module managed by the BaseSkill framework with automated fallback.
+                </p>
+            </div>
+
+            <!-- Skill Filter Buttons -->
+            <div class="skills-filter-bar">
+                <button class="skill-filter-btn active" onclick="filterSkills('all')">All Skills (16)</button>
+                <button class="skill-filter-btn" onclick="filterSkills('system')">System &amp; OS</button>
+                <button class="skill-filter-btn" onclick="filterSkills('productivity')">Productivity</button>
+                <button class="skill-filter-btn" onclick="filterSkills('communication')">Communication</button>
+                <button class="skill-filter-btn" onclick="filterSkills('knowledge')">Knowledge &amp; Web</button>
+                <button class="skill-filter-btn" onclick="filterSkills('tools')">Utilities</button>
+            </div>
+
+            <!-- Skills Grid -->
+            <div class="skills-grid" id="skillsGrid">
+                
+                <!-- Skill 1 -->
+                <div class="skill-card glass-panel" data-category="system">
+                    <div class="skill-card-top">
+                        <i class="fa-solid fa-terminal skill-icon"></i>
+                        <span class="skill-badge">System</span>
+                    </div>
+                    <h4>System Skill</h4>
+                    <p>Volume control, brightness, battery metrics, task termination, screenshots, and OS shutdown/restart.</p>
+                    <div class="skill-trigger-tag">"Increase volume to 80%"</div>
+                </div>
+
+                <!-- Skill 2 -->
+                <div class="skill-card glass-panel" data-category="system">
+                    <div class="skill-card-top">
+                        <i class="fa-solid fa-rocket skill-icon"></i>
+                        <span class="skill-badge">System</span>
+                    </div>
+                    <h4>App Launcher Skill</h4>
+                    <p>Scans Windows Start Menu &amp; registry to open any desktop program with fuzzy matching.</p>
+                    <div class="skill-trigger-tag">"Open VS Code / Notepad"</div>
+                </div>
+
+                <!-- Skill 3 -->
+                <div class="skill-card glass-panel" data-category="communication">
+                    <div class="skill-card-top">
+                        <i class="fa-brands fa-whatsapp skill-icon" style="color:#25d366;"></i>
+                        <span class="skill-badge">Communication</span>
+                    </div>
+                    <h4>WhatsApp Skill</h4>
+                    <p>Hands-free messaging, voice calls, video calls, and group chat broadcasts via PyWhatKit.</p>
+                    <div class="skill-trigger-tag">"Send WhatsApp to Ali"</div>
+                </div>
+
+                <!-- Skill 4 -->
+                <div class="skill-card glass-panel" data-category="communication">
+                    <div class="skill-card-top">
+                        <i class="fa-solid fa-phone skill-icon"></i>
+                        <span class="skill-badge">Communication</span>
+                    </div>
+                    <h4>Phone Calling Skill</h4>
+                    <p>Direct integration with connected phone links and voice dialers for one-command calling.</p>
+                    <div class="skill-trigger-tag">"Call John Mobile"</div>
+                </div>
+
+                <!-- Skill 5 -->
+                <div class="skill-card glass-panel" data-category="productivity">
+                    <div class="skill-card-top">
+                        <i class="fa-solid fa-file-pdf skill-icon" style="color:#ef4444;"></i>
+                        <span class="skill-badge">Productivity</span>
+                    </div>
+                    <h4>Document Analyzer</h4>
+                    <p>Extract, parse and perform RAG question answering across PDF, Word DOCX, CSV and JSON files.</p>
+                    <div class="skill-trigger-tag">"Summarize uploaded document"</div>
+                </div>
+
+                <!-- Skill 6 -->
+                <div class="skill-card glass-panel" data-category="productivity">
+                    <div class="skill-card-top">
+                        <i class="fa-solid fa-calendar-days skill-icon"></i>
+                        <span class="skill-badge">Productivity</span>
+                    </div>
+                    <h4>Calendar &amp; Events</h4>
+                    <p>Schedule meetings, query upcoming agenda, set recurring events, and check timetable conflicts.</p>
+                    <div class="skill-trigger-tag">"What is on my calendar today?"</div>
+                </div>
+
+                <!-- Skill 7 -->
+                <div class="skill-card glass-panel" data-category="productivity">
+                    <div class="skill-card-top">
+                        <i class="fa-solid fa-clipboard-list skill-icon"></i>
+                        <span class="skill-badge">Productivity</span>
+                    </div>
+                    <h4>Quick Notes &amp; Memos</h4>
+                    <p>Persist quick thoughts, create markdown notes, read saved memos, and sync with local storage.</p>
+                    <div class="skill-trigger-tag">"Take a note: Buy groceries"</div>
+                </div>
+
+                <!-- Skill 8 -->
+                <div class="skill-card glass-panel" data-category="knowledge">
+                    <div class="skill-card-top">
+                        <i class="fa-brands fa-youtube skill-icon" style="color:#ff0000;"></i>
+                        <span class="skill-badge">Knowledge</span>
+                    </div>
+                    <h4>Media &amp; YouTube Skill</h4>
+                    <p>Search YouTube, autoplay requested videos, play song tracks, and control playback hands-free.</p>
+                    <div class="skill-trigger-tag">"Play lo-fi beats on YouTube"</div>
+                </div>
+
+                <!-- Skill 9 -->
+                <div class="skill-card glass-panel" data-category="knowledge">
+                    <div class="skill-card-top">
+                        <i class="fa-solid fa-magnifying-glass skill-icon"></i>
+                        <span class="skill-badge">Knowledge</span>
+                    </div>
+                    <h4>Web Search &amp; Wikipedia</h4>
+                    <p>Instant Wikipedia summarization, Google Search querying, and real-time knowledge retrieval.</p>
+                    <div class="skill-trigger-tag">"Who is Alan Turing?"</div>
+                </div>
+
+                <!-- Skill 10 -->
+                <div class="skill-card glass-panel" data-category="knowledge">
+                    <div class="skill-card-top">
+                        <i class="fa-solid fa-cloud-sun skill-icon" style="color:#f59e0b;"></i>
+                        <span class="skill-badge">Knowledge</span>
+                    </div>
+                    <h4>Weather &amp; Climate</h4>
+                    <p>Live meteorological forecasts, humidity, wind velocity, and precipitation warnings worldwide.</p>
+                    <div class="skill-trigger-tag">"Weather in New York today"</div>
+                </div>
+
+                <!-- Skill 11 -->
+                <div class="skill-card glass-panel" data-category="knowledge">
+                    <div class="skill-card-top">
+                        <i class="fa-solid fa-newspaper skill-icon"></i>
+                        <span class="skill-badge">Knowledge</span>
+                    </div>
+                    <h4>Live News Aggregator</h4>
+                    <p>Fetches top headlines across Tech, Business, Science, and Global politics in real time.</p>
+                    <div class="skill-trigger-tag">"What are the top tech headlines?"</div>
+                </div>
+
+                <!-- Skill 12 -->
+                <div class="skill-card glass-panel" data-category="tools">
+                    <div class="skill-card-top">
+                        <i class="fa-solid fa-calculator skill-icon"></i>
+                        <span class="skill-badge">Utilities</span>
+                    </div>
+                    <h4>Math &amp; Calculator</h4>
+                    <p>Evaluates complex algebraic equations, unit conversions, currency exchange, and statistical math.</p>
+                    <div class="skill-trigger-tag">"Calculate sqrt(144) * 25"</div>
+                </div>
+
+                <!-- Skill 13 -->
+                <div class="skill-card glass-panel" data-category="tools">
+                    <div class="skill-card-top">
+                        <i class="fa-solid fa-map-location-dot skill-icon"></i>
+                        <span class="skill-badge">Utilities</span>
+                    </div>
+                    <h4>Maps &amp; Navigation</h4>
+                    <p>Locates addresses, generates directions on Google Maps, and calculates transit distances.</p>
+                    <div class="skill-trigger-tag">"Directions from Mumbai to Pune"</div>
+                </div>
+
+                <!-- Skill 14 -->
+                <div class="skill-card glass-panel" data-category="productivity">
+                    <div class="skill-card-top">
+                        <i class="fa-solid fa-pen-nib skill-icon"></i>
+                        <span class="skill-badge">Productivity</span>
+                    </div>
+                    <h4>Writing &amp; Grammar</h4>
+                    <p>Draft professional emails, rewrite paragraphs, check grammar, and generate bullet point briefs.</p>
+                    <div class="skill-trigger-tag">"Write a formal leave email"</div>
+                </div>
+
+                <!-- Skill 15 -->
+                <div class="skill-card glass-panel" data-category="tools">
+                    <div class="skill-card-top">
+                        <i class="fa-solid fa-graduation-cap skill-icon"></i>
+                        <span class="skill-badge">Utilities</span>
+                    </div>
+                    <h4>Study &amp; Flashcards</h4>
+                    <p>Generates study flashcards, explains complex STEM concepts simply, and quizzes the user.</p>
+                    <div class="skill-trigger-tag">"Explain quantum entanglement"</div>
+                </div>
+
+                <!-- Skill 16 -->
+                <div class="skill-card glass-panel" data-category="tools">
+                    <div class="skill-card-top">
+                        <i class="fa-solid fa-gears skill-icon"></i>
+                        <span class="skill-badge">Utilities</span>
+                    </div>
+                    <h4>Automation Skill</h4>
+                    <p>Automate multi-step repetitive workflows, chained hotkeys, and custom scheduled macros.</p>
+                    <div class="skill-trigger-tag">"Execute morning routine"</div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== ARCHITECTURE & FLOW ==================== -->
+    <section id="architecture">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-tag">
+                    <i class="fa-solid fa-sitemap"></i>
+                    <span>Engine Anatomy</span>
+                </div>
+                <h2 class="section-title">How Dracarys Executes Commands</h2>
+                <p class="section-desc">
+                    A zero-friction, modular pipeline uniting modern Web frontend and native Python power.
+                </p>
+            </div>
+
+            <div class="glass-panel arch-flow-wrapper">
+                <div class="arch-steps-grid">
+                    
+                    <div class="arch-step-card">
+                        <div class="step-num">1</div>
+                        <h4>Voice &amp; Input Capture</h4>
+                        <p>SpeechRecognition engine or floating HUD capture user audio/text with automatic Hindi/English language identification.</p>
+                    </div>
+
+                    <div class="arch-step-card">
+                        <div class="step-num">2</div>
+                        <h4>Intent Resolver</h4>
+                        <p>Pattern matcher &amp; NLP classifier determines whether to route to a local skill module or query the Gemini/OpenAI LLM.</p>
+                    </div>
+
+                    <div class="arch-step-card">
+                        <div class="step-num">3</div>
+                        <h4>Execution &amp; Automation</h4>
+                        <p>Native Python execution runs OS actions, WhatsApp automation, document parsing, or system API calls in parallel threads.</p>
+                    </div>
+
+                    <div class="arch-step-card">
+                        <div class="step-num">4</div>
+                        <h4>Neural TTS &amp; HUD Render</h4>
+                        <p>Synthesizes speech using Edge/Azure neural voices while Eel WebSocket sends live card updates and visualizer waveforms to the UI.</p>
+                    </div>
+
+                </div>
+
+                <div class="mt-5 p-4 rounded-3 text-center" style="background:rgba(0,0,0,0.5); border:1px solid var(--border-glass);">
+                    <div class="d-flex flex-wrap justify-content-center align-items-center gap-4 text-muted small mono">
+                        <span><i class="fa-brands fa-python text-warning me-1"></i> Python 3.10+</span>
+                        <span>&bull;</span>
+                        <span><i class="fa-brands fa-js text-warning me-1"></i> Eel WebSocket IPC</span>
+                        <span>&bull;</span>
+                        <span><i class="fa-solid fa-brain text-info me-1"></i> Gemini 3.5 &amp; OpenAI</span>
+                        <span>&bull;</span>
+                        <span><i class="fa-solid fa-cube text-danger me-1"></i> Three.js 3D Canvas</span>
+                        <span>&bull;</span>
+                        <span><i class="fa-solid fa-database text-primary me-1"></i> SQLite Database</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== COMPARISON TABLE ==================== -->
+    <section id="comparison">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-tag">
+                    <i class="fa-solid fa-scale-balanced"></i>
+                    <span>Competitive Edge</span>
+                </div>
+                <h2 class="section-title">Why Dracarys AI Stands Out</h2>
+                <p class="section-desc">
+                    See how Dracarys compares to standard chatbots and traditional proprietary voice assistants.
+                </p>
+            </div>
+
+            <div class="comparison-table-wrapper glass-panel">
+                <table class="comp-table">
+                    <thead>
+                        <tr>
+                            <th>Feature / Capability</th>
+                            <th class="highlight-col"><i class="fa-solid fa-dragon me-2" style="color:var(--primary);"></i>Dracarys AI 2.0</th>
+                            <th>Traditional Siri / Alexa</th>
+                            <th>Web ChatGPT / Claude</th>
+                            <th>Basic Python Bot</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Native OS App &amp; System Control</strong></td>
+                            <td class="highlight-col"><i class="bi bi-check-circle-fill comp-check"></i> Full Desktop Control</td>
+                            <td><i class="bi bi-dash-circle text-warning"></i> Limited to vendor ecosystem</td>
+                            <td><i class="bi bi-x-circle-fill comp-cross"></i> None (Browser only)</td>
+                            <td><i class="bi bi-check-circle-fill comp-check"></i> Basic shortcuts</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Bilingual Hindi &amp; English Speech</strong></td>
+                            <td class="highlight-col"><i class="bi bi-check-circle-fill comp-check"></i> Native Neural Voices</td>
+                            <td><i class="bi bi-check-circle-fill comp-check"></i> Standard Voice</td>
+                            <td><i class="bi bi-x-circle-fill comp-cross"></i> Text / Voice only</td>
+                            <td><i class="bi bi-x-circle-fill comp-cross"></i> Robotic SAPI5 only</td>
+                        </tr>
+                        <tr>
+                            <td><strong>WhatsApp &amp; Phone Calling</strong></td>
+                            <td class="highlight-col"><i class="bi bi-check-circle-fill comp-check"></i> Direct Automated Calling</td>
+                            <td><i class="bi bi-check-circle-fill comp-check"></i> Supported on phones</td>
+                            <td><i class="bi bi-x-circle-fill comp-cross"></i> Not Supported</td>
+                            <td><i class="bi bi-dash-circle text-warning"></i> Partial</td>
+                        </tr>
+                        <tr>
+                            <td><strong>RAG Multi-format Document Q&amp;A</strong></td>
+                            <td class="highlight-col"><i class="bi bi-check-circle-fill comp-check"></i> PDF, DOCX, CSV, JSON</td>
+                            <td><i class="bi bi-x-circle-fill comp-cross"></i> Not Supported</td>
+                            <td><i class="bi bi-check-circle-fill comp-check"></i> Requires Web Upload</td>
+                            <td><i class="bi bi-x-circle-fill comp-cross"></i> Not Supported</td>
+                        </tr>
+                        <tr>
+                            <td><strong>3D Interactive Audio Orb &amp; Dragon</strong></td>
+                            <td class="highlight-col"><i class="bi bi-check-circle-fill comp-check"></i> WebGL 3D Particles</td>
+                            <td><i class="bi bi-x-circle-fill comp-cross"></i> Static 2D icons</td>
+                            <td><i class="bi bi-x-circle-fill comp-cross"></i> Flat web UI</td>
+                            <td><i class="bi bi-x-circle-fill comp-cross"></i> Command line terminal</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Extensible Modular Skills</strong></td>
+                            <td class="highlight-col"><i class="bi bi-check-circle-fill comp-check"></i> 15+ Python Skills</td>
+                            <td><i class="bi bi-dash-circle text-warning"></i> Closed SDK</td>
+                            <td><i class="bi bi-dash-circle text-warning"></i> Custom GPTs</td>
+                            <td><i class="bi bi-dash-circle text-warning"></i> Hardcoded if/else</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Privacy &amp; Local Persistence</strong></td>
+                            <td class="highlight-col"><i class="bi bi-check-circle-fill comp-check"></i> 100% Local SQLite Memory</td>
+                            <td><i class="bi bi-x-circle-fill comp-cross"></i> Cloud Vendor Cloud</td>
+                            <td><i class="bi bi-x-circle-fill comp-cross"></i> OpenAI/Anthropic Cloud</td>
+                            <td><i class="bi bi-check-circle-fill comp-check"></i> Local</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== QUICKSTART & INSTALLATION ==================== -->
+    <section id="quickstart">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-tag">
+                    <i class="bi bi-terminal-fill"></i>
+                    <span>Get Started in 60 Seconds</span>
+                </div>
+                <h2 class="section-title">Install &amp; Run Dracarys</h2>
+                <p class="section-desc">
+                    Clone the open-source repository, install dependencies, and launch your desktop assistant.
+                </p>
+            </div>
+
+            <div class="install-tab-container glass-panel">
+                <div class="install-nav">
+                    <button class="install-tab-btn active" onclick="switchInstallTab('win')">
+                        <i class="fa-brands fa-windows me-1"></i> Windows (Recommended)
+                    </button>
+                    <button class="install-tab-btn" onclick="switchInstallTab('manual')">
+                        <i class="fa-solid fa-code me-1"></i> Manual Setup
+                    </button>
+                    <button class="install-tab-btn" onclick="switchInstallTab('env')">
+                        <i class="fa-solid fa-key me-1"></i> .env Configuration
+                    </button>
+                    <button class="install-tab-btn" onclick="switchInstallTab('shortcuts')">
+                        <i class="fa-solid fa-keyboard me-1"></i> Keyboard Shortcuts
+                    </button>
+                </div>
+
+                <!-- Tab 1: Windows One-Click -->
+                <div id="tab-win" class="code-block">
+                    <button class="copy-btn" onclick="copyCodeText('codeWin')"><i class="bi bi-copy me-1"></i>Copy</button>
+                    <pre><code id="codeWin"># 1. Clone repository
+git clone https://github.com/MrAliHasan/Sophia-AI-Assistant.git
+cd Sophia-AI-Assistant
+
+# 2. Setup Virtual Environment
+python -m venv venv
+.\venv\Scripts\activate
+
+# 3. Install required libraries
+pip install -r requirements.txt
+
+# 4. Launch the AI Virtual Assistant
+python main.py
+# Or double click 'run.bat' for one-click startup!</code></pre>
+                </div>
+
+                <!-- Tab 2: Manual Setup -->
+                <div id="tab-manual" class="code-block" style="display:none;">
+                    <button class="copy-btn" onclick="copyCodeText('codeManual')"><i class="bi bi-copy me-1"></i>Copy</button>
+                    <pre><code id="codeManual"># TypeScript frontend bundle build (Optional if modifying src/ts)
+npm install
+npm run build
+
+# Run unit and skill typechecks
+npm run typecheck
+
+# Run backend engine
+python main.py</code></pre>
+                </div>
+
+                <!-- Tab 3: .env Config -->
+                <div id="tab-env" class="code-block" style="display:none;">
+                    <button class="copy-btn" onclick="copyCodeText('codeEnv')"><i class="bi bi-copy me-1"></i>Copy</button>
+                    <pre><code id="codeEnv"># .env Configuration File
+ASSISTANT_NAME=Dracarys
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-3.5-flash-lite
+SPEECH_LANG=en-IN
+TTS_HINDI_VOICE=hi-IN-MadhurNeural
+TTS_ENGLISH_VOICE=en-IN-NeerjaNeural
+ASSISTANT_THEME=fire</code></pre>
+                </div>
+
+                <!-- Tab 4: Shortcuts -->
+                <div id="tab-shortcuts" class="code-block" style="display:none;">
+                    <pre><code style="color:#a7f3d0;">Keyboard Shortcuts Cheatsheet:
+─────────────────────────────────────────────────────────────────────────────
+• Win + J    : Global background wake shortcut to focus assistant
+• Ctrl + M   : Toggle Microphone & Voice Recognition
+• Ctrl + U   : Open Document File Picker for Instant RAG Ingestion
+• Ctrl + H   : Open Conversation History Offcanvas
+• Ctrl + ,   : Open Voice, Neural Accent & Theme Settings
+• Esc        : Stop Speaking / Mute Audio Output
+• D          : Trigger 3D Dragon Fire Dracarys Mode</code></pre>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== FAQ SECTION ==================== -->
+    <section id="faq">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-tag">
+                    <i class="fa-solid fa-circle-question"></i>
+                    <span>Got Questions?</span>
+                </div>
+                <h2 class="section-title">Frequently Asked Questions</h2>
+                <p class="section-desc">
+                    Find answers to commonly asked questions about Dracarys AI assistant setup and usage.
+                </p>
+            </div>
+
+            <div class="faq-list">
+                
+                <div class="faq-item glass-panel active">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        <span>Is Dracarys AI completely free to use?</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        Yes! Dracarys AI is open-source. It leverages Google Gemini's generous free tier and Azure Edge Neural TTS, allowing you to use all voice, document analysis, and automation capabilities without paying for API credits.
+                    </div>
+                </div>
+
+                <div class="faq-item glass-panel">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        <span>How does the bilingual English &amp; Hindi recognition work?</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        Dracarys combines Google Speech Recognition (configured for <code>en-IN</code> and <code>hi-IN</code>) with a custom Python NLP language detector. It automatically detects Devanagari script or phonetic Hinglish, routes to the appropriate prompt context, and speaks back using Microsoft's neural voices (Madhur or Swara).
+                    </div>
+                </div>
+
+                <div class="faq-item glass-panel">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        <span>Can I add my own custom skills or automation routines?</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        Absolutely! All skills inherit from <code>BaseSkill</code> located in <code>engine/skills/base_skill.py</code>. You can create a new <code>.py</code> file in <code>engine/skills/</code>, implement the <code>can_handle()</code> and <code>execute()</code> methods, and Dracarys will automatically register and route commands to your new skill.
+                    </div>
+                </div>
+
+                <div class="faq-item glass-panel">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        <span>What formats are supported for document analysis?</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        The built-in Document Analyzer supports PDF (via PyPDF2/pdfplumber), Word documents (.docx/.doc), CSV, JSON, plain text (.txt), and Markdown (.md). You can click the paperclip icon or press <code>Ctrl+U</code> to analyze any file.
+                    </div>
+                </div>
+
+                <div class="faq-item glass-panel">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        <span>How do I switch between Gemini and OpenAI models?</span>
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </div>
+                    <div class="faq-answer">
+                        You can open your <code>.env</code> file or use the in-app Settings panel (<code>Ctrl+,</code>) to set <code>AI_PROVIDER=openai</code> or <code>AI_PROVIDER=gemini</code>, along with your respective API keys.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== CALL TO ACTION BANNER ==================== -->
+    <section style="padding: 60px 0 100px;">
+        <div class="container">
+            <div class="cta-banner">
+                <h2 style="font-size: 2.8rem; margin-bottom: 16px; font-weight: 800;">
+                    Supercharge Your Desktop with <br>
+                    <span class="gradient-text">Dracarys AI Assistant</span>
+                </h2>
+                <p style="color: var(--text-muted); font-size: 1.15rem; max-width: 620px; margin: 0 auto 36px;">
+                    Open-source, lightning fast, bilingual, and loaded with 15+ autonomous skills. Ready to run on your local machine today.
+                </p>
+                <div class="d-flex flex-wrap justify-content-center gap-3">
+                    <a href="https://github.com/MrAliHasan/Sophia-AI-Assistant" target="_blank" class="btn btn-primary btn-glow" style="padding: 14px 32px; font-size: 1.05rem;">
+                        <i class="fa-brands fa-github"></i>
+                        <span>Star on GitHub</span>
+                    </a>
+                    <a href="https://www.youtube.com/playlist?list=PLoGk-8pBKSRVWvGN372yBzrF15tSv22KY" target="_blank" class="btn btn-secondary" style="padding: 14px 32px; font-size: 1.05rem;">
+                        <i class="fa-brands fa-youtube" style="color:#ff0000;"></i>
+                        <span>Watch Step-by-Step Tutorial</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== FOOTER ==================== -->
+    <footer class="site-footer">
+        <div class="container">
+            <div class="footer-grid">
+                
+                <div class="footer-brand">
+                    <div class="brand-logo mb-2">
+                        <div class="brand-icon">
+                            <i class="fa-solid fa-dragon"></i>
+                        </div>
+                        <span>DRACARYS <span style="color:var(--primary);">AI</span></span>
+                    </div>
+                    <p>
+                        The ultimate open-source bilingual autonomous AI desktop companion engineered with Python, Eel, Gemini, and 3D WebGL particle physics.
+                    </p>
+                </div>
+
+                <div class="footer-col">
+                    <h5>Navigation</h5>
+                    <ul>
+                        <li><a href="#hero">Home</a></li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#skills">Skills Catalog</a></li>
+                        <li><a href="#simulator">Playground</a></li>
+                        <li><a href="#architecture">Architecture</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-col">
+                    <h5>Resources</h5>
+                    <ul>
+                        <li><a href="https://github.com/MrAliHasan/Sophia-AI-Assistant" target="_blank">GitHub Repository</a></li>
+                        <li><a href="https://www.youtube.com/playlist?list=PLoGk-8pBKSRVWvGN372yBzrF15tSv22KY" target="_blank">YouTube Tutorials</a></li>
+                        <li><a href="#quickstart">Setup Guide</a></li>
+                        <li><a href="#shortcuts">Keyboard Shortcuts</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-col">
+                    <h5>Community &amp; Author</h5>
+                    <p style="color:var(--text-muted); font-size:0.9rem; line-height:1.6; margin-bottom:14px;">
+                        Created by <strong>Ali Hassan</strong> (MrAliHasan) &amp; contributors. Dedicated to pushing desktop AI assistants forward.
+                    </p>
+                    <div class="d-flex gap-3">
+                        <a href="https://github.com/MrAliHasan" target="_blank" class="btn btn-secondary btn-sm"><i class="fa-brands fa-github"></i></a>
+                        <a href="https://youtube.com/@MrAliHasan" target="_blank" class="btn btn-secondary btn-sm"><i class="fa-brands fa-youtube" style="color:#ff0000;"></i></a>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="footer-bottom">
+                <div>&copy; 2026 Dracarys AI Virtual Assistant. Released under MIT Open Source License.</div>
+                <div class="d-flex gap-4">
+                    <span>Built with ❤️ for Python &amp; AI Developers</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+    <script>
+        // 1. Theme Switcher Logic
+        function setTheme(themeName) {
+            document.body.setAttribute('data-theme', themeName);
+            document.querySelectorAll('.theme-dot').forEach(dot => {
+                dot.classList.toggle('active', dot.classList.contains('dot-' + themeName));
+            });
+            if (window.particleMaterial) {
+                if (themeName === 'cyan') window.particleMaterial.color.setHex(0x00f0ff);
+                else if (themeName === 'emerald') window.particleMaterial.color.setHex(0x00ff88);
+                else if (themeName === 'purple') window.particleMaterial.color.setHex(0xa855f7);
+                else window.particleMaterial.color.setHex(0xff5500);
+            }
+        }
+
+        // 2. Three.js Background Particle Constellation
+        let scene, camera, renderer, particles;
+        function initThreeBackground() {
+            const canvas = document.getElementById('bgCanvas');
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+            camera.position.z = 400;
+
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            const particleCount = 200;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const scales = new Float32Array(particleCount);
+
+            for (let i = 0; i < particleCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 800;
+                positions[i + 1] = (Math.random() - 0.5) * 800;
+                positions[i + 2] = (Math.random() - 0.5) * 600;
+                scales[i / 3] = Math.random() * 2 + 1;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            window.particleMaterial = new THREE.PointsMaterial({
+                color: 0xff5500,
+                size: 3,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending
+            });
+
+            particles = new THREE.Points(geometry, window.particleMaterial);
+            scene.add(particles);
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            // Mouse parallax
+            let mouseX = 0, mouseY = 0;
+            document.addEventListener('mousemove', (e) => {
+                mouseX = (e.clientX - window.innerWidth / 2) * 0.05;
+                mouseY = (e.clientY - window.innerHeight / 2) * 0.05;
+            });
+
+            function animate() {
+                requestAnimationFrame(animate);
+                particles.rotation.y += 0.0012;
+                particles.rotation.x += 0.0006;
+                camera.position.x += (mouseX - camera.position.x) * 0.05;
+                camera.position.y += (-mouseY - camera.position.y) * 0.05;
+                renderer.render(scene, camera);
+            }
+            animate();
+        }
+        if (typeof THREE !== 'undefined') {
+            initThreeBackground();
+        }
+
+        // 3. Hero Orb Sine Wave Visualizer
+        function drawHeroSine() {
+            const canvas = document.getElementById('heroSineCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            canvas.width = 160;
+            canvas.height = 50;
+
+            let step = 0;
+            function renderWave() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.beginPath();
+                ctx.lineWidth = 2;
+                
+                const theme = document.body.getAttribute('data-theme') || 'fire';
+                ctx.strokeStyle = (theme === 'cyan') ? '#00f0ff' : (theme === 'emerald') ? '#00ff88' : (theme === 'purple') ? '#c084fc' : '#ff5500';
+
+                const height = canvas.height;
+                const width = canvas.width;
+
+                for (let x = 0; x < width; x++) {
+                    const y = Math.sin((x + step) * 0.08) * 12 * Math.sin(x * 0.04) + height / 2;
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+                step += 2;
+                requestAnimationFrame(renderWave);
+            }
+            renderWave();
+        }
+        drawHeroSine();
+
+        // 4. Hero Orb Interactive Click
+        function triggerHeroOrbPulse() {
+            const sphere = document.getElementById('heroOrbSphere');
+            const text = document.getElementById('heroOrbText');
+            sphere.style.transform = 'scale(1.15)';
+            text.innerText = 'Listening (EN / HI)...';
+            text.style.color = '#00f0ff';
+            
+            setTimeout(() => {
+                sphere.style.transform = 'scale(1)';
+                text.innerText = 'Dracarys Online';
+                text.style.color = '#ffffff';
+                runSimulatedQuery('Dracarys! Unleash dragon fire mode!');
+            }, 1200);
+        }
+
+        // 5. Interactive Simulator Preset Responses
+        const mockResponses = {
+            'Open YouTube and play Interstellar theme': {
+                response: 'Opening YouTube in browser and launching Hans Zimmer - Interstellar Main Theme (Official Audio). Enjoy the soundtrack!',
+                lang: 'en'
+            },
+            'Ali ko WhatsApp par message bhejo ki meeting 4 baje hai': {
+                response: 'Ali Hassan ko WhatsApp par message send kar diya gaya hai: "Meeting 4 baje hai".',
+                lang: 'hi'
+            },
+            'Summarize my quarterly earnings financial PDF document': {
+                response: 'Parsed Annual_Report_2026.pdf (42 pages). Key Highlights: Revenue grew 28% YoY to $4.2M; Gross margin held steady at 74%; R&D expenses increased by 12% in AI infrastructure.',
+                lang: 'en'
+            },
+            'Open YouTube and search latest AI agent tutorials': {
+                response: 'Opening YouTube and searching for latest AI agent tutorials and Python assistant builds.',
+                lang: 'en'
+            },
+            'Ali Hassan ko WhatsApp message bhejo: Main 10 minute me call karta hu': {
+                response: 'Ali Hassan ke WhatsApp chat box par message bhej diya gaya hai: "Main 10 minute me call karta hu".',
+                lang: 'hi'
+            },
+            'Analyze document: Find high risks in contract.pdf': {
+                response: 'Contract document analysis complete: 2 high-risk indemnity clauses identified under Section 14.3 regarding un-capped liability for third-party delays.',
+                lang: 'en'
+            },
+            'What is the weather in Delhi and calculate 2400 * 18% GST?': {
+                response: 'Weather in Delhi: 31°C, Haze with 48% humidity. Calculation: 2400 * 18% GST = ₹432.00 (Total with GST = ₹2,832.00).',
+                lang: 'en'
+            },
+            'Dracarys! Unleash dragon fire mode!': {
+                response: '🔥 DRACARYS ACTIVATED! All 15 skill engines running at peak performance. WebGL particle fire ignited!',
+                lang: 'en'
+            }
+        };
+
+        let currentSimText = "Opening YouTube in your browser and searching for the latest AI agent tutorials now...";
+        let currentSimLang = "en";
+
+        function runSimulatedQuery(query) {
+            const queryEcho = document.getElementById('simQueryEcho');
+            const responseText = document.getElementById('simResponseText');
+            const wave = document.getElementById('simAudioWave');
+
+            queryEcho.innerText = `"${query}"`;
+            responseText.innerHTML = '<span class="text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i>Processing intent via Gemini NLP...</span>';
+            wave.style.display = 'flex';
+
+            document.querySelectorAll('.sim-chip').forEach(chip => {
+                chip.classList.toggle('active', chip.innerText.includes(query.slice(0, 10)));
+            });
+
+            // Scroll to simulator if triggered from hero
+            const simEl = document.getElementById('simulator');
+            if (simEl && window.scrollY < 400) {
+                simEl.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            setTimeout(() => {
+                const match = mockResponses[query] || {
+                    response: `Processed command: "${query}". Intent recognized successfully and executed via modular Python skill runner.`,
+                    lang: query.match(/[\u0900-\u097F]/) ? 'hi' : 'en'
+                };
+                responseText.innerText = match.response;
+                currentSimText = match.response;
+                currentSimLang = match.lang;
+            }, 600);
+        }
+
+        function speakCurrentResponse() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(currentSimText);
+                utterance.lang = (currentSimLang === 'hi') ? 'hi-IN' : 'en-US';
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert('Speech synthesis is not supported on this browser.');
+            }
+        }
+
+        function clearSimConsole() {
+            document.getElementById('simQueryEcho').innerText = '"Hi, how can I help you today?"';
+            document.getElementById('simResponseText').innerText = 'Ready. Ask me anything in English or हिन्दी!';
+            currentSimText = 'Ready. Ask me anything in English or Hindi!';
+        }
+
+        function submitCustomSim() {
+            const input = document.getElementById('simCustomInput');
+            const val = input.value.trim();
+            if (val) {
+                runSimulatedQuery(val);
+                input.value = '';
+            }
+        }
+
+        function handleSimEnter(e) {
+            if (e.key === 'Enter') submitCustomSim();
+        }
+
+        function toggleSimMic() {
+            if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+                alert('Web Speech Recognition is not supported in this browser. Please use Chrome.');
+                return;
+            }
+            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRec();
+            recognition.lang = 'en-IN';
+            const micBtn = document.getElementById('simMicBtn');
+            micBtn.style.background = '#ef4444';
+            micBtn.style.color = '#fff';
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('simCustomInput').value = transcript;
+                submitCustomSim();
+            };
+            recognition.onend = () => {
+                micBtn.style.background = '';
+                micBtn.style.color = '';
+            };
+            recognition.start();
+        }
+
+        // 6. Skills Filtering Logic
+        function filterSkills(category) {
+            document.querySelectorAll('.skill-filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('onclick').includes(category));
+            });
+            document.querySelectorAll('.skill-card').forEach(card => {
+                if (category === 'all' || card.getAttribute('data-category') === category) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // 7. Installation Tabs Logic
+        function switchInstallTab(tabId) {
+            document.querySelectorAll('.install-tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('onclick').includes(tabId));
+            });
+            ['win', 'manual', 'env', 'shortcuts'].forEach(id => {
+                const el = document.getElementById('tab-' + id);
+                if (el) el.style.display = (id === tabId) ? 'block' : 'none';
+            });
+        }
+
+        // 8. Clipboard Copy Helper
+        function copyCodeText(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            navigator.clipboard.writeText(el.innerText).then(() => {
+                alert('Copied to clipboard!');
+            });
+        }
+
+        // 9. FAQ Toggle Accordion
+        function toggleFaq(el) {
+            const item = el.parentElement;
+            item.classList.toggle('active');
+        }
+    </script>
+</body>
+</html>
