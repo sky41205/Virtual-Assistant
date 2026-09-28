@@ -1,147 +1,186 @@
-# Sophia AI Assistant
-Sophia is a desktop AI assistant built using Python that can perform various tasks such as answering questions like ChatGPT, opening desktop applications, browsing websites, and even making phone and WhatsApp calls. This project is designed to be versatile and extensible, with the ability to add more functionalities easily. It integrates the Hugging Face API, a free ChatGPT alternative to simulate conversation, and offers multiple activation methods for user commands.
+# DRACARYS AI Virtual Assistant
 
-## Demo Video
-You can check out the demo by clicking on the below image
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Google Gemini](https://img.shields.io/badge/Gemini_AI-3.5_Flash-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://aistudio.google.com/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
-[![Demo Video](https://github.com/user-attachments/assets/b54a65c4-1deb-40e1-b957-772285d14c54)](https://youtu.be/dgCYDETwjcs)
+**Dracarys AI** is a next-generation bilingual (English & Hindi) autonomous desktop AI assistant built with Python, Eel WebSocket IPC, and modern WebGL HUD interfaces. It combines hands-free voice intelligence, full desktop OS automation, multi-format RAG document querying, and 15+ modular skills into a zero-latency local companion.
 
+---
 
-## Features
+## ✨ Key Features
 
-* **Voice Activation:** Activate Sophia by saying "Sophia."
-* **Text Input:** Type your queries and press enter to receive a response.
-* **App Control:** Open applications like Notepad and OneNote.
-* **Website Navigation:** Open websites like YouTube and Canva.
-* **Multimedia Control:** Search and play specific videos on YouTube.
-* **Phone and WhatsApp Communication:** Make calls or send messages.
+- 🎙️ **Bilingual Speech & Neural Voices**: Native code-switching between English, Hindi (हिंदी), and Hinglish with Microsoft Azure Edge Neural voices (*Madhur*, *Swara*, *Neerja*).
+- 🧠 **Hybrid Multi-LLM Brain**: Pre-warmed Google Gemini 3.5 Flash core with automatic OpenAI GPT-4o fallback for high-availability conversational intelligence.
+- 🐉 **3D WebGL Particle HUD & Dracarys Fire**: Real-time Three.js audio-reactive harmonic sine-wave visualizer and dragonfire effects.
+- ⚡ **Full OS & Hardware Automation**: Hands-free application launcher, system volume, brightness, battery metrics, screenshot capture, and process management.
+- 📄 **RAG Multi-Format Document Analyzer**: Contextual parsing and question answering across PDF, Word (DOCX), CSV, JSON, TXT, and Markdown files (`Ctrl + U`).
+- 💬 **WhatsApp & Phone Calling Suite**: Hands-free WhatsApp messaging, voice/video call triggers, and contact fuzzy matching.
+- 🧩 **15+ Modular Skill Engines**: Isolated, high-performance skills for Weather, Math & Unit Conversions, Maps & Transit, Live News, Quick Notes, Calendar & Reminders, and Writing assistance.
+- 🌐 **Modern Interactive Landing Page**: Included standalone [landing.html](landing.html) with live assistant playground and audio synthesis testing.
 
-## Technology Used:
-- #### Languages:
-  - ![PYTHON](https://img.shields.io/badge/Python-FFD43B?style=for-the-badge&logo=python&logoColor=darkgreen)
-  - ![HTML](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
-  - ![CSS](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
-  - ![JAVASCRIPT](https://img.shields.io/badge/JavaScript-323330?style=for-the-badge&logo=javascript&logoColor=F7DF1E)
-- #### FrameWork:
-  - ![BOOTSTRAP](https://img.shields.io/badge/Bootstrap-563D7C?style=for-the-badge&logo=bootstrap&logoColor=white)
-- #### Database:
-  - ![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)
-- #### API used for:
-  - Hugging Face API ![Hugging Face API](https://github.com/user-attachments/assets/17108a47-2fbf-4ea7-bac7-b66e3fafe9e0)
+---
 
-## Installation
+## 🛠️ Technology Stack
+
+- **Backend**: Python 3.10+, Eel (WebSocket IPC), PyAutoGUI, SpeechRecognition, Pyttsx3, Edge-TTS, Requests, BeautifulSoup4
+- **Frontend**: HTML5, CSS3 Glassmorphism, TypeScript / JavaScript ES6+, Three.js (3D WebGL), Bootstrap 5
+- **AI & NLP**: Google Gemini 3.5 Flash, OpenAI GPT-4o, Custom Devanagari/Hinglish Language Detector
+- **Storage**: SQLite local database for conversations, contact books, and persistent memory
+
+---
+
+## 🚀 Quickstart & Installation
 
 ### Prerequisites
-Make sure you have Python installed. Then, install the following packages:
+
+Make sure you have **Python 3.10+** and **Git** installed on your system.
+
+### 1. Clone the Repository
 
 ```bash
-beautifulsoup4==4.12.3
-blinker==1.8.2
-bottle @ git+https://github.com/bottlepy/bottle.git@3fdb8b2a2e0d1641374b53ef2b051fe7f54508b5
-bottle-websocket==0.2.9
-certifi==2024.7.4
-cffi==1.16.0
-charset-normalizer==3.3.2
-click==8.1.7
-colorama==0.4.6
-comtypes==1.4.4
-Eel==0.16.0
-enum34==1.1.10
-Flask==3.0.3
-future==1.0.0
-gevent==24.2.1
-gevent-websocket==0.10.1
-greenlet==3.0.3
-hugchat==0.4.8
-idna==3.7
-itsdangerous==2.2.0
-Jinja2==3.1.4
-MarkupSafe==2.1.5
-MouseInfo==0.1.3
-numpy==2.0.0
-pillow==10.4.0
-playsound==1.2.2
-pocketsphinx==5.0.3
-psutil==6.0.0
-pvporcupine==1.9.5
-PyAudio==0.2.14
-PyAutoGUI==0.9.54
-pycparser==2.22
-PyGetWindow==0.0.9
-PyMsgBox==1.0.9
-pyparsing==3.1.2
-pyperclip==1.9.0
-pypiwin32==223
-PyRect==0.2.0
-PyScreeze==0.1.30
-pyttsx3==2.90
-pytweening==1.2.0
-pywhatkit==5.4
-pywin32==306
-requests==2.32.3
-requests-toolbelt==1.0.0
-setuptools==70.2.0
-sounddevice==0.4.7
-soupsieve==2.5
-SpeechRecognition==3.10.4
-typing_extensions==4.12.2
-urllib3==2.2.2
-Werkzeug==3.0.3
-whichcraft==0.6.1
-wikipedia==1.4.0
-zope.event==5.0
-zope.interface==6.4.post2
+git clone https://github.com/sky41205/Virtual-Assistant.git
+cd Virtual-Assistant
 ```
 
-### Setup Instructions
+### 2. Set Up a Virtual Environment
 
-**Clone the Repository:**
-   ```bash
-   git clone https://github.com/yourusername/sophia-ai-assistant.git
-   cd sophia-ai-assistant
+```bash
+# Windows
+python -m venv venv
+.\venv\Scripts\activate
+
+# Linux / macOS
+python3 -m venv venv
+source venv/bin/activate
 ```
-__To install the necessary dependencies and set up the API and database, I recommend checking out my YouTube tutorial series where I walk you through the entire process of building an AI assistant.__
 
-### 📺 [Watch the Full YouTube Tutorial Series](https://www.youtube.com/playlist?list=PLoGk-8pBKSRVWvGN372yBzrF15tSv22KY)
+### 3. Install Dependencies
 
-## Usage
+```bash
+pip install -r requirements.txt
+```
 
-### Activating the Assistant
-There are several ways to activate Sophia:
+### 4. Configure Environment Variables
 
-- **Voice Activation:** Simply say "Sophia."
-- **Text Input:** Type your query in the input box (e.g., "How are you?").
-- **Keyboard Shortcut:** Press `Window + J` to activate the assistant.
+Copy the example environment template and add your API keys:
 
-### Supported Commands
+```bash
+copy .env.example .env
+```
 
-#### Query Answering
-Ask Sophia questions, and she'll answer using the Hugging Face API, a free ChatGPT alternative.
-**Example:** "Tell me about yourself"
+Edit `.env` with your preferred settings:
 
-#### Opening Applications
-- "Open Notepad"
-- "Open OneNote"
+```env
+ASSISTANT_NAME=Dracarys
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-3.5-flash-lite
+SPEECH_LANG=en-IN
+TTS_HINDI_VOICE=hi-IN-MadhurNeural
+TTS_ENGLISH_VOICE=en-IN-NeerjaNeural
+ASSISTANT_THEME=fire
+```
 
-#### Website Navigation
-- "Open YouTube"
-- "Open Canva"
+> 💡 *Note: You can get a free Gemini API key from [Google AI Studio](https://aistudio.google.com/).*
 
-#### Multimedia Search
-- "Play the video of the 99 names of Allah on YouTube"
+### 5. Launch Dracarys AI
 
-#### Phone and Messaging
-- "Sophia, make a phone call to Ali Hassan"
-- "Sophia, send a message to Ali Hassan"
-- "Sophia, make a video call on WhatsApp"
+```bash
+python main.py
+```
 
-### Future Enhancements
-- **Custom Application and Website Management:** Users will be able to add their applications and websites without needing to work with databases or SQL.
-- **Expanded Application Support:** Add support for more desktop and web applications.
-- **Customizable Settings:** Implement user-configurable settings for a more personalized experience.
+*Or simply double-click `run.bat` on Windows for one-click startup!*
 
-## Contributing
-Feel free to open issues or submit pull requests to improve the project. Contributions are welcome, whether it’s adding new features, fixing bugs, or improving documentation.
+---
 
-## Feedback
-If you have any suggestions or want to request additional features, leave a comment on the YouTube tutorial series. Your feedback is highly appreciated!
+## ⌨️ Keyboard Shortcuts
+
+| Shortcut | Description |
+| :--- | :--- |
+| `Win + J` | Global wake shortcut to bring Dracarys to the foreground |
+| `Ctrl + M` | Toggle Microphone & Voice Recognition |
+| `Ctrl + U` | Open Document File Ingestion (PDF, DOCX, CSV, TXT) |
+| `Ctrl + H` | Open Conversation & Task History |
+| `Ctrl + ,` | Open Voice, Accent & Theme Settings |
+| `Esc` | Stop Speaking / Mute Audio Voice Output |
+| `D` | Trigger 3D Dragonfire Dracarys Mode |
+
+---
+
+## 🗣️ Supported Commands & Examples
+
+### 🌐 Query Answering & Bilingual Chat
+- *"Tell me about quantum computing in simple terms."*
+- *"कल का मौसम कैसा रहेगा और 15% डिस्काउंट के बाद 4500 कितना होगा?"* (Hindi)
+
+### 💻 Desktop App & OS Automation
+- *"Open Visual Studio Code"*
+- *"Open Notepad and increase system volume to 80%"*
+- *"Take a screenshot"*
+
+### 📱 Communication & WhatsApp
+- *"Send WhatsApp message to Ali: Meeting is at 4 PM"*
+- *"Ali ko WhatsApp par call karo"*
+
+### 📄 Document Analysis (RAG)
+- Upload file with `Ctrl + U` and ask: *"Summarize the risk clauses in this agreement."*
+
+### 🎵 Multimedia & YouTube
+- *"Play Hans Zimmer Interstellar soundtrack on YouTube"*
+- *"Search for latest machine learning research on YouTube"*
+
+---
+
+## 📂 Project Structure
+
+```
+Virtual-Assistant/
+├── engine/                   # Python core engine & modular skills
+│   ├── skills/               # 15+ modular skill implementations
+│   │   ├── automation_skill.py
+│   │   ├── calculator_skill.py
+│   │   ├── calendar_skill.py
+│   │   ├── system_skill.py
+│   │   └── ...
+│   ├── app_launcher.py       # Start menu and app indexing
+│   ├── command.py            # Command router & eel exposed bridges
+│   ├── communication.py      # WhatsApp & telephony automation
+│   ├── config.py             # App configurations & .env manager
+│   ├── document_analyzer.py  # RAG document parser
+│   ├── intent_resolver.py    # Intent classifier & pattern matcher
+│   ├── language_detector.py  # Hindi/English NLP detector
+│   ├── llm.py                # Gemini & OpenAI client wrapper
+│   └── logger.py             # Logging subsystem
+├── src/                      # TypeScript frontend source
+├── www/                      # Web UI (Eel viewport assets)
+│   ├── index.html            # Main desktop application interface
+│   ├── landing.html          # In-app landing page
+│   ├── style.css             # Glassmorphism design system
+│   └── assets/               # Audio clips, icons, and 3D vendor scripts
+├── landing.html              # Standalone web landing page
+├── main.py                   # Application entrypoint
+├── requirements.txt          # Python dependencies
+├── run.bat                   # Windows one-click launcher
+└── .env.example              # Environment variables template
+```
+
+---
+
+## 🤝 Contributing
+
+Contributions, feature requests, and bug reports are welcome! Feel free to open an issue or submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+Distributed under the **MIT License**. See `LICENSE` for more information.
