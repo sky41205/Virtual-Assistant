@@ -19,6 +19,22 @@
       "use": "@vercel/static"
     },
     {
+      "src": "style.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "controller.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "dist/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "assets/**",
+      "use": "@vercel/static"
+    },
+    {
       "src": "www/**",
       "use": "@vercel/static"
     }
@@ -29,32 +45,12 @@
       "dest": "/api/chat.js"
     },
     {
-      "src": "/style.css",
-      "dest": "/www/style.css"
-    },
-    {
-      "src": "/controller.js",
-      "dest": "/www/controller.js"
-    },
-    {
-      "src": "/main.js",
-      "dest": "/www/main.js"
-    },
-    {
-      "src": "/dist/(.*)",
-      "dest": "/www/dist/$1"
-    },
-    {
-      "src": "/assets/(.*)",
-      "dest": "/www/assets/$1"
-    },
-    {
       "src": "/landing",
       "dest": "/landing.html"
     },
     {
       "src": "/app",
-      "dest": "/www/index.html"
+      "dest": "/app.html"
     },
     {
       "src": "/(.*)",
