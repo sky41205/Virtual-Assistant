@@ -1,7 +1,9 @@
 /* ================================================================
    DRACARYS AI — voiceEngine.ts
-   Speech Recognition Handler: Web Speech API with Seamless Python Fallback,
-   Live Audio Transcription, Multi-Tier Error Recovery, and Status Sync
+   Universal Speech Recognition & Multimodal Voice Recording Engine:
+   - Tier 1: Real-time Web Speech API (Chrome/Edge/Safari)
+   - Tier 2: Multimodal MediaRecorder Audio Upload to /api/chat (Firefox/Brave/Mobile)
+   - Tier 3: Native PyAudio Eel Bridge (Desktop Python Mode)
    ================================================================ */
 
 import { AssistantState } from "./types";
@@ -15,10 +17,14 @@ export interface VoiceEngineCallbacks {
 
 export class VoiceEngine {
     private recognition: any = null;
+    private mediaRecorder: MediaRecorder | null = null;
+    private audioChunks: Blob[] = [];
+    private activeStream: MediaStream | null = null;
     private isListening: boolean = false;
+    private isPythonListening: boolean = false;
     private callbacks: VoiceEngineCallbacks;
     private SpeechAPI: any = null;
-    private isPythonListening: boolean = false;
+    private silenceTimer: any = null;
 
     constructor(callbacks: VoiceEngineCallbacks) {
         this.callbacks = callbacks;
@@ -26,7 +32,7 @@ export class VoiceEngine {
     }
 
     public isSupported(): boolean {
-        return !!this.SpeechAPI || (!!(window as any).eel && !!(window as any).eel.allCommands);
+        return !!this.SpeechAPI || !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) || (!!(window as any).eel && !!(window as any).eel.allCommands);
     }
 
     public async startListening(preferredLang?: string): Promise<void> {
@@ -35,110 +41,224 @@ export class VoiceEngine {
             return;
         }
 
-        const lang = preferredLang || (document.getElementById("settingSpeechLang") as HTMLSelectElement)?.value || "en-IN";
+        const langSelect = document.getElementById("settingSpeechLang") as HTMLSelectElement;
+        const lang = preferredLang || (langSelect ? langSelect.value : "en-IN") || "en-IN";
 
-        // If Web Speech API is not supported, directly trigger Python desktop speech recognition
-        if (!this.SpeechAPI) {
-            console.info("Web Speech API not supported in this browser. Activating Python SpeechRecognition.");
+        // Desktop Python Eel Mode: use native PyAudio directly
+        if ((window as any).eel && (window as any).eel.allCommands) {
             this.triggerPythonSpeech();
             return;
         }
 
+        // Web / Vercel Live Mode:
+        this.isListening = true;
+        this.audioChunks = [];
+        this.callbacks.onStateChange(AssistantState.LISTENING, "Listening… Speak clearly now");
+
+        // Request microphone stream for MediaRecorder & Visualizer
+        let stream: MediaStream | null = null;
         try {
-            this.recognition = new this.SpeechAPI();
-            this.recognition.lang = lang;
-            this.recognition.interimResults = true;
-            this.recognition.continuous = false;
-            this.recognition.maxAlternatives = 1;
-
-            let finalTranscript = "";
-            let capturedAny = false;
-
-            this.recognition.onstart = () => {
-                this.isListening = true;
-                this.callbacks.onStateChange(AssistantState.LISTENING, "Listening… Speak clearly now");
-            };
-
-            this.recognition.onresult = (event: any) => {
-                let interim = "";
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript + " ";
-                    } else {
-                        interim += event.results[i][0].transcript;
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
                     }
-                }
-                const live = (finalTranscript + interim).trim();
-                if (live) {
-                    capturedAny = true;
-                    this.callbacks.onInterimText(live);
-                }
-            };
+                });
+                this.activeStream = stream;
+            }
+        } catch (permErr: any) {
+            this.isListening = false;
+            console.warn("Microphone getUserMedia permission notice:", permErr);
+            this.callbacks.onError(
+                "permission-denied",
+                "Microphone access blocked. Click the lock icon in your browser address bar to allow microphone."
+            );
+            return;
+        }
 
-            this.recognition.onerror = (event: any) => {
-                this.isListening = false;
-                console.warn("VoiceEngine Web Speech error:", event.error);
-
-                // Ignore explicit user cancellations
-                if (event.error === "aborted") {
-                    return;
-                }
-
-                // If running in Eel Desktop mode, automatically fall back to Python microphone capture
-                if ((window as any).eel && (window as any).eel.allCommands) {
-                    console.info("Web Speech error (" + event.error + "); falling back to Python PyAudio engine.");
-                    this.triggerPythonSpeech();
-                    return;
-                }
-
-                let errorTitle = "Speech recognition error";
-                switch (event.error) {
-                    case "not-allowed":
-                    case "permission-denied":
-                        errorTitle = "Microphone access blocked. Please allow mic permissions or type below.";
-                        break;
-                    case "no-speech":
-                        errorTitle = "No speech detected. Speak again or type below.";
-                        break;
-                    case "audio-capture":
-                        errorTitle = "Microphone not ready. Check your audio device or type below.";
-                        break;
-                    case "network":
-                        errorTitle = "Speech network connection error. Type your message below.";
-                        break;
-                    default:
-                        errorTitle = `Speech error: ${event.error}`;
-                        break;
-                }
-                this.callbacks.onError(event.error, errorTitle);
-            };
-
-            this.recognition.onend = () => {
-                this.isListening = false;
-                const result = finalTranscript.trim();
-                if (result) {
-                    this.callbacks.onFinalResult(result);
-                } else if (!capturedAny) {
-                    // Fall back to Python if no speech caught in Web Speech API
-                    if ((window as any).eel && (window as any).eel.allCommands) {
-                        console.info("No audio captured in Web Speech; attempting Python recognition fallback.");
-                        this.triggerPythonSpeech();
-                    } else {
-                        this.callbacks.onError("no-speech", "No speech detected. Please try again.");
+        // Initialize MediaRecorder as reliable multimodal audio fallback
+        if (stream && typeof MediaRecorder !== "undefined") {
+            try {
+                const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+                    ? "audio/webm;codecs=opus"
+                    : MediaRecorder.isTypeSupported("audio/webm")
+                        ? "audio/webm"
+                        : MediaRecorder.isTypeSupported("audio/mp4")
+                            ? "audio/mp4"
+                            : "";
+                
+                this.mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+                this.mediaRecorder.ondataavailable = (e) => {
+                    if (e.data && e.data.size > 0) {
+                        this.audioChunks.push(e.data);
                     }
-                }
-            };
-
-            this.recognition.start();
-
-        } catch (err: any) {
-            console.warn("VoiceEngine start exception, switching to Python fallback:", err);
-            if ((window as any).eel && (window as any).eel.allCommands) {
-                this.triggerPythonSpeech();
-            } else {
-                this.callbacks.onError("start-failed", "Could not start microphone. You can type in the box below.");
+                };
+                this.mediaRecorder.start(250);
+            } catch (mrErr) {
+                console.warn("MediaRecorder init note:", mrErr);
             }
         }
+
+        // If Web Speech API is available, try real-time streaming recognition
+        if (this.SpeechAPI) {
+            try {
+                this.recognition = new this.SpeechAPI();
+                this.recognition.lang = lang;
+                this.recognition.interimResults = true;
+                this.recognition.continuous = false;
+                this.recognition.maxAlternatives = 1;
+
+                let finalTranscript = "";
+                let capturedAny = false;
+
+                this.recognition.onstart = () => {
+                    this.callbacks.onStateChange(AssistantState.LISTENING, "Listening… Speak now (English / हिंदी)");
+                };
+
+                this.recognition.onresult = (event: any) => {
+                    let interim = "";
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript += event.results[i][0].transcript + " ";
+                        } else {
+                            interim += event.results[i][0].transcript;
+                        }
+                    }
+                    const live = (finalTranscript + interim).trim();
+                    if (live) {
+                        capturedAny = true;
+                        this.callbacks.onInterimText(live);
+                    }
+                };
+
+                this.recognition.onerror = (event: any) => {
+                    console.warn("Web Speech API notice:", event.error);
+                    if (event.error === "aborted") return;
+
+                    // If Web Speech fails (e.g. network/no-speech on Vercel), fall back to recorded audio
+                    if (this.mediaRecorder && this.mediaRecorder.state === "recording") {
+                        this.finishRecordingAndSendAudio(lang);
+                    } else {
+                        this.callbacks.onError(event.error, "Voice recognition error. You can also type below.");
+                    }
+                };
+
+                this.recognition.onend = () => {
+                    this.isListening = false;
+                    const result = finalTranscript.trim();
+                    if (result) {
+                        this.cleanupStream();
+                        this.callbacks.onFinalResult(result);
+                    } else if (!capturedAny) {
+                        // If no text captured by Web Speech, try processing recorded audio with serverless Gemini
+                        this.finishRecordingAndSendAudio(lang);
+                    }
+                };
+
+                this.recognition.start();
+                return;
+            } catch (recErr) {
+                console.warn("Web Speech start exception, using direct MediaRecorder audio capture:", recErr);
+            }
+        }
+
+        // Fallback: Set a 5-second automatic recording window for MediaRecorder
+        if (this.silenceTimer) clearTimeout(this.silenceTimer);
+        this.silenceTimer = setTimeout(() => {
+            if (this.isListening) {
+                this.finishRecordingAndSendAudio(lang);
+            }
+        }, 5000);
+    }
+
+    private async finishRecordingAndSendAudio(lang: string): Promise<void> {
+        this.isListening = false;
+        if (this.silenceTimer) clearTimeout(this.silenceTimer);
+
+        if (!this.mediaRecorder || this.audioChunks.length === 0) {
+            this.cleanupStream();
+            this.callbacks.onError("no-speech", "No speech detected. Please speak clearly or type below.");
+            return;
+        }
+
+        this.callbacks.onStateChange(AssistantState.PROCESSING, "Thinking… Processing your voice");
+
+        try {
+            if (this.mediaRecorder.state === "recording") {
+                this.mediaRecorder.stop();
+            }
+
+            // Small delay to let final dataavailable chunk arrive
+            await new Promise((resolve) => setTimeout(resolve, 300));
+
+            const audioBlob = new Blob(this.audioChunks, { type: this.mediaRecorder.mimeType || "audio/webm" });
+            this.cleanupStream();
+
+            if (audioBlob.size < 1000) {
+                this.callbacks.onError("no-speech", "Audio was too short. Please try speaking again.");
+                return;
+            }
+
+            // Convert to base64
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+            reader.onloadend = async () => {
+                const base64Data = (reader.result as string).split(",")[1];
+                if (!base64Data) {
+                    this.callbacks.onError("audio-error", "Could not process audio. Type your request below.");
+                    return;
+                }
+
+                try {
+                    const res = await fetch("/api/chat", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            audio: base64Data,
+                            mimeType: audioBlob.type || "audio/webm",
+                            lang: lang
+                        })
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.response) {
+                            if (window.assistantApp && window.assistantApp.displayActiveResponse) {
+                                window.assistantApp.displayActiveResponse(data.response, "🎤 Voice Command", lang, true);
+                            }
+                            if (window.assistantApp && window.assistantApp.conversationManager) {
+                                window.assistantApp.conversationManager.addUserMessage("🎤 Spoken Voice Input", "voice");
+                                window.assistantApp.conversationManager.addAssistantMessage(data.response, "ai_chat", {}, "SUCCESS", true, lang);
+                            }
+                            return;
+                        }
+                    }
+                    this.callbacks.onError("network", "Could not reach assistant server. Please type your message.");
+                } catch (apiErr) {
+                    console.warn("Direct voice API error:", apiErr);
+                    this.callbacks.onError("network", "Connection error. Please try again or type below.");
+                }
+            };
+        } catch (err) {
+            this.cleanupStream();
+            console.warn("Audio processing error:", err);
+            this.callbacks.onError("error", "Error processing voice. Please type below.");
+        }
+    }
+
+    private cleanupStream(): void {
+        if (this.activeStream) {
+            try {
+                this.activeStream.getTracks().forEach((track) => track.stop());
+            } catch (e) {}
+            this.activeStream = null;
+        }
+        if (this.mediaRecorder) {
+            this.mediaRecorder = null;
+        }
+        this.audioChunks = [];
     }
 
     public triggerPythonSpeech(): void {
@@ -159,12 +279,20 @@ export class VoiceEngine {
     public stopListening(): void {
         this.isListening = false;
         this.isPythonListening = false;
+        if (this.silenceTimer) clearTimeout(this.silenceTimer);
+
         if (this.recognition) {
             try {
                 this.recognition.abort();
             } catch (e) {}
             this.recognition = null;
         }
+        if (this.mediaRecorder && this.mediaRecorder.state === "recording") {
+            try {
+                this.mediaRecorder.stop();
+            } catch (e) {}
+        }
+        this.cleanupStream();
     }
 
     public getListeningState(): boolean {

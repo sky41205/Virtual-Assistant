@@ -2439,26 +2439,55 @@ ASSISTANT_THEME=fire</code></pre>
 
         function toggleSimMic() {
             if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-                alert('Web Speech Recognition is not supported in this browser. Please use Chrome.');
+                alert('Web Speech Recognition is not supported in this browser. Please use Google Chrome or Microsoft Edge.');
                 return;
             }
             const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
             const recognition = new SpeechRec();
             recognition.lang = 'en-IN';
+            recognition.interimResults = true;
             const micBtn = document.getElementById('simMicBtn');
+            const inputEl = document.getElementById('simCustomInput');
             micBtn.style.background = '#ef4444';
             micBtn.style.color = '#fff';
+            if (inputEl) inputEl.placeholder = 'Listening… Speak your question now';
+
+            let finalTranscript = '';
 
             recognition.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                document.getElementById('simCustomInput').value = transcript;
-                submitCustomSim();
+                let interim = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript + ' ';
+                    } else {
+                        interim += event.results[i][0].transcript;
+                    }
+                }
+                const live = (finalTranscript + interim).trim();
+                if (inputEl && live) inputEl.value = live;
+            };
+            recognition.onerror = (e) => {
+                micBtn.style.background = '';
+                micBtn.style.color = '';
+                if (inputEl) inputEl.placeholder = 'Try typing: "What is quantum computing?" or "नमस्ते"';
+                if (e.error === 'not-allowed') {
+                    alert('Microphone access was blocked. Click the lock icon in your browser URL bar to allow microphone access.');
+                }
             };
             recognition.onend = () => {
                 micBtn.style.background = '';
                 micBtn.style.color = '';
+                if (inputEl) inputEl.placeholder = 'Try typing: "What is quantum computing?" or "नमस्ते"';
+                if (finalTranscript.trim()) {
+                    submitCustomSim();
+                }
             };
-            recognition.start();
+            try {
+                recognition.start();
+            } catch (err) {
+                micBtn.style.background = '';
+                micBtn.style.color = '';
+            }
         }
 
         // 6. Skills Filtering Logic
