@@ -8,3 +8,4 @@ logs/
 node_modules/
 
 .vercel
+openapi_dump.json

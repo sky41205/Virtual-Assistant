@@ -1,7 +1,7 @@
 /* ================================================================
    DRACARYS AI — voiceEngine.ts
-   Speech Recognition Handler: Web Speech API with Python Fallback,
-   Live Transcription, Permission Handling, and Text Fallback
+   Speech Recognition Handler: Web Speech API with Seamless Python Fallback,
+   Live Audio Transcription, Multi-Tier Error Recovery, and Status Sync
    ================================================================ */
 
 import { AssistantState } from "./types";
@@ -18,6 +18,7 @@ export class VoiceEngine {
     private isListening: boolean = false;
     private callbacks: VoiceEngineCallbacks;
     private SpeechAPI: any = null;
+    private isPythonListening: boolean = false;
 
     constructor(callbacks: VoiceEngineCallbacks) {
         this.callbacks = callbacks;
@@ -25,41 +26,21 @@ export class VoiceEngine {
     }
 
     public isSupported(): boolean {
-        return !!this.SpeechAPI;
+        return !!this.SpeechAPI || (!!(window as any).eel && !!(window as any).eel.allCommands);
     }
 
     public async startListening(preferredLang?: string): Promise<void> {
-        if (this.isListening) {
+        if (this.isListening || this.isPythonListening) {
             this.stopListening();
+            return;
         }
 
         const lang = preferredLang || (document.getElementById("settingSpeechLang") as HTMLSelectElement)?.value || "en-IN";
 
-        // If Web Speech is unsupported, trigger Python backend takeCommand
+        // If Web Speech API is not supported, directly trigger Python desktop speech recognition
         if (!this.SpeechAPI) {
-            console.warn("Web Speech API not supported in this browser. Falling back to Python SpeechRecognition.");
-            this.callbacks.onStateChange(AssistantState.LISTENING, "Listening via system microphone…");
-            if (window.eel && window.eel.allCommands) {
-                window.eel.playClickSound();
-                window.eel.allCommands()();
-            }
-            return;
-        }
-
-        // Check / request microphone permission
-        try {
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                stream.getTracks().forEach(t => t.stop()); // release for SpeechRecognition
-            }
-        } catch (permErr: any) {
-            console.warn("Browser getUserMedia failed, falling back to Python speech recognition:", permErr);
-            if (window.eel && window.eel.allCommands) {
-                this.callbacks.onStateChange(AssistantState.LISTENING, "Listening via microphone…");
-                window.eel.allCommands()();
-                return;
-            }
-            this.callbacks.onError("permission-denied", "Microphone access blocked. You can type in the box below.");
+            console.info("Web Speech API not supported in this browser. Activating Python SpeechRecognition.");
+            this.triggerPythonSpeech();
             return;
         }
 
@@ -96,36 +77,35 @@ export class VoiceEngine {
 
             this.recognition.onerror = (event: any) => {
                 this.isListening = false;
-                console.warn("VoiceEngine error:", event.error);
+                console.warn("VoiceEngine Web Speech error:", event.error);
+
+                // Ignore explicit user cancellations
+                if (event.error === "aborted") {
+                    return;
+                }
+
+                // If running in Eel Desktop mode, automatically fall back to Python microphone capture
+                if ((window as any).eel && (window as any).eel.allCommands) {
+                    console.info("Web Speech error (" + event.error + "); falling back to Python PyAudio engine.");
+                    this.triggerPythonSpeech();
+                    return;
+                }
 
                 let errorTitle = "Speech recognition error";
                 switch (event.error) {
                     case "not-allowed":
                     case "permission-denied":
-                        if (window.eel && window.eel.allCommands) {
-                            console.warn("Web Speech denied, fallback to Python backend takeCommand.");
-                            this.callbacks.onStateChange(AssistantState.LISTENING, "Listening via microphone…");
-                            window.eel.allCommands()();
-                            return;
-                        }
-                        errorTitle = "Microphone access blocked. Click 'Type Instead' to enter text.";
+                        errorTitle = "Microphone access blocked. Please allow mic permissions or type below.";
                         break;
                     case "no-speech":
                         errorTitle = "No speech detected. Speak again or type below.";
                         break;
                     case "audio-capture":
-                        if (window.eel && window.eel.allCommands) {
-                            this.callbacks.onStateChange(AssistantState.LISTENING, "Listening via microphone…");
-                            window.eel.allCommands()();
-                            return;
-                        }
-                        errorTitle = "Microphone not ready. Type below to ask.";
+                        errorTitle = "Microphone not ready. Check your audio device or type below.";
                         break;
                     case "network":
-                        errorTitle = "Network connection error during voice recognition.";
+                        errorTitle = "Speech network connection error. Type your message below.";
                         break;
-                    case "aborted":
-                        return; // User explicitly cancelled
                     default:
                         errorTitle = `Speech error: ${event.error}`;
                         break;
@@ -139,24 +119,46 @@ export class VoiceEngine {
                 if (result) {
                     this.callbacks.onFinalResult(result);
                 } else if (!capturedAny) {
-                    this.callbacks.onError("no-speech", "No speech detected. Please try again.");
+                    // Fall back to Python if no speech caught in Web Speech API
+                    if ((window as any).eel && (window as any).eel.allCommands) {
+                        console.info("No audio captured in Web Speech; attempting Python recognition fallback.");
+                        this.triggerPythonSpeech();
+                    } else {
+                        this.callbacks.onError("no-speech", "No speech detected. Please try again.");
+                    }
                 }
             };
 
             this.recognition.start();
 
         } catch (err: any) {
-            console.warn("Recognition start exception, falling back to Python:", err);
-            this.callbacks.onStateChange(AssistantState.LISTENING, "Listening via system microphone…");
-            if (window.eel && window.eel.allCommands) {
-                window.eel.playClickSound();
-                window.eel.allCommands()();
+            console.warn("VoiceEngine start exception, switching to Python fallback:", err);
+            if ((window as any).eel && (window as any).eel.allCommands) {
+                this.triggerPythonSpeech();
+            } else {
+                this.callbacks.onError("start-failed", "Could not start microphone. You can type in the box below.");
             }
+        }
+    }
+
+    public triggerPythonSpeech(): void {
+        this.isPythonListening = true;
+        this.callbacks.onStateChange(AssistantState.LISTENING, "Listening via microphone…");
+
+        if ((window as any).eel && (window as any).eel.allCommands) {
+            try {
+                if ((window as any).eel.playClickSound) (window as any).eel.playClickSound();
+            } catch (e) {}
+
+            (window as any).eel.allCommands(1)(() => {
+                this.isPythonListening = false;
+            });
         }
     }
 
     public stopListening(): void {
         this.isListening = false;
+        this.isPythonListening = false;
         if (this.recognition) {
             try {
                 this.recognition.abort();
@@ -166,6 +168,6 @@ export class VoiceEngine {
     }
 
     public getListeningState(): boolean {
-        return this.isListening;
+        return this.isListening || this.isPythonListening;
     }
 }

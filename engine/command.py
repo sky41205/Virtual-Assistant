@@ -784,8 +784,15 @@ def getDiagnosticHealth():
 
 @eel.expose
 def takeCommand():
-    """Capture voice input from microphone with noise filtering, multi-language fallback, and robust error handling."""
+    """Capture voice input from microphone with robust ambient calibration, clamped energy threshold, and multilingual fallback."""
     r = sr.Recognizer()
+    r.dynamic_energy_threshold = True
+    r.dynamic_energy_adjustment_damping = 0.15
+    r.dynamic_energy_ratio = 1.5
+    r.pause_threshold = 0.8          # Allows natural breathing and pauses (prevents mid-sentence cutoff)
+    r.phrase_threshold = 0.3         # Minimum seconds of speaking to start a phrase
+    r.non_speaking_duration = 0.5    # Non-speaking audio kept on both sides
+
     from engine.config import SPEECH_LANG
     primary_lang = SPEECH_LANG or 'en-IN'
 
@@ -796,17 +803,22 @@ def takeCommand():
             speech_logger.info("Microphone open. Calibrating ambient noise...")
             try:
                 eel.SetListeningState(True)
-                eel.DisplayMessage('Listening...')
+                eel.DisplayMessage('Listening... Speak now')
             except Exception:
                 pass
 
-            r.pause_threshold = 0.45       # stop recording 0.45s after silence (was 0.6)
-            r.energy_threshold = 300
-            r.dynamic_energy_threshold = True
-            r.adjust_for_ambient_noise(source, duration=0.05)  # was 0.25 — saves 200ms
+            # Small sleep to let any UI click/tap sound settle before ambient calibration
+            time.sleep(0.08)
+            r.adjust_for_ambient_noise(source, duration=0.4)
 
-            speech_logger.info("Listening for speech...")
-            audio = r.listen(source, timeout=6, phrase_time_limit=6)  # was 8s
+            # Clamp energy threshold into a safe operational zone so neither silence nor loud clicks cause failure
+            if r.energy_threshold < 150:
+                r.energy_threshold = 150
+            elif r.energy_threshold > 800:
+                r.energy_threshold = 800
+
+            speech_logger.info(f"Listening for speech (energy_threshold={r.energy_threshold:.1f})...")
+            audio = r.listen(source, timeout=8, phrase_time_limit=12)
 
         speech_logger.info("Audio received. Transcribing speech...")
         try:
@@ -814,34 +826,43 @@ def takeCommand():
         except Exception:
             pass
 
+        # Multilingual candidate list: primary language, followed by Indian English, Hindi, US English
+        candidates = [primary_lang]
+        for lang_code in ['en-IN', 'hi-IN', 'en-US', 'hi']:
+            if lang_code not in candidates:
+                candidates.append(lang_code)
+
         query = ""
-        try:
-            query = r.recognize_google(audio, language=primary_lang)
-        except sr.UnknownValueError:
-            speech_logger.debug("Primary language recognition did not detect words, attempting fallback...")
-            fallback_lang = 'hi-IN' if primary_lang != 'hi-IN' else 'en-IN'
+        for lang in candidates:
             try:
-                query = r.recognize_google(audio, language=fallback_lang)
-            except Exception:
-                pass
-        except sr.RequestError as req_err:
-            speech_logger.error(f"Google Speech Recognition service unreachable: {req_err}")
-            try:
-                eel.ShowErrorNotification("Voice Network Error", "Could not reach speech recognition servers. Please verify your connection.", "network")
-            except Exception:
-                pass
-            return ""
+                query = r.recognize_google(audio, language=lang)
+                if query and query.strip():
+                    speech_logger.info(f"Voice recognized successfully with language '{lang}': '{query.strip()}'")
+                    break
+            except sr.UnknownValueError:
+                continue
+            except sr.RequestError as req_err:
+                speech_logger.error(f"Google Speech Recognition service unreachable for {lang}: {req_err}")
+                try:
+                    eel.ShowErrorNotification("Voice Network Error", "Could not reach speech recognition servers. Please check your internet connection.", "network")
+                except Exception:
+                    pass
+                break
+            except Exception as e:
+                speech_logger.debug(f"Candidate recognition error ({lang}): {e}")
+                continue
 
         if not query:
             speech_logger.info("No speech detected or audio was unintelligible.")
             try:
                 eel.SetListeningState(False)
+                eel.DisplayMessage("Hi, how can i Help you ...")
             except Exception:
                 pass
             return ""
 
         query_str = query.strip()
-        speech_logger.info(f"Voice recognized successfully: '{query_str}'")
+        speech_logger.info(f"Voice query processed: '{query_str}'")
         try:
             eel.ShowRecognizedText(query_str)
             eel.DisplayMessage(query_str)
@@ -854,6 +875,7 @@ def takeCommand():
         speech_logger.info("Speech recognition timed out: no voice detected.")
         try:
             eel.SetListeningState(False)
+            eel.DisplayMessage("Hi, how can i Help you ...")
         except Exception:
             pass
         return ""
@@ -861,6 +883,7 @@ def takeCommand():
         speech_logger.error(f"Error during microphone recording: {e}", exc_info=True)
         try:
             eel.SetListeningState(False)
+            eel.DisplayMessage("Hi, how can i Help you ...")
             eel.ShowErrorNotification("Microphone Error", f"Microphone error: {str(e)[:80]}. Try typing your command.", "mic")
         except Exception:
             pass
@@ -900,6 +923,13 @@ def allCommands(message=1):
                     eel.AppendUserBubble(query, "voice", lang_res.get("mode", "english"))
                 except Exception:
                     pass
+            else:
+                try:
+                    eel.ShowHood()
+                    eel.UpdateAssistantState("idle", "Ready")
+                except Exception:
+                    pass
+                return
         else:
             query = str(message).strip()
             lang_res = detect_language(query)

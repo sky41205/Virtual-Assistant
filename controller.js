@@ -64,13 +64,52 @@ function SetSpeakingState(isSpeaking) {
 
 function SetListeningState(isListening) {
     try {
-        if (window.assistantApp) {
-            if (isListening) {
-                window.assistantApp.visualizer?.setState("listening", "Listening…");
-            } else {
-                window.assistantApp.visualizer?.setState("idle", "Ready");
+        var micBtn = document.getElementById("MicBtn");
+        var orb = document.getElementById("aiOrbContainer");
+        var badge = document.getElementById("micLiveStatusBadge");
+
+        if (isListening) {
+            if (micBtn) micBtn.classList.add("is-listening");
+            if (orb) orb.classList.add("is-listening");
+            if (badge) badge.classList.remove("d-none");
+            if (window.assistantApp && window.assistantApp.visualizer) {
+                window.assistantApp.visualizer.setState("listening", "Listening…");
+            }
+        } else {
+            if (micBtn) micBtn.classList.remove("is-listening");
+            if (orb) orb.classList.remove("is-listening");
+            if (badge) badge.classList.add("d-none");
+            if (window.assistantApp && window.assistantApp.visualizer) {
+                window.assistantApp.visualizer.setState("idle", "Ready");
             }
         }
+    } catch (e) {}
+    return true;
+}
+
+function startSpeechRecognition() {
+    try {
+        if (window.assistantApp && window.assistantApp.voiceEngine) {
+            window.assistantApp.voiceEngine.startListening();
+        } else {
+            var micBtn = document.getElementById("MicBtn");
+            if (micBtn) micBtn.click();
+        }
+    } catch (e) {}
+    return true;
+}
+
+function stopSpeechRecognition() {
+    try {
+        if (window.assistantApp && window.assistantApp.voiceEngine) {
+            window.assistantApp.voiceEngine.stopListening();
+        }
+        var micBtn = document.getElementById("MicBtn");
+        if (micBtn) micBtn.classList.remove("is-listening");
+        var orb = document.getElementById("aiOrbContainer");
+        if (orb) orb.classList.remove("is-listening");
+        var badge = document.getElementById("micLiveStatusBadge");
+        if (badge) badge.classList.add("d-none");
     } catch (e) {}
     return true;
 }
@@ -309,6 +348,8 @@ if (window.eel) {
     eel.expose(openSettingsPanel);
     eel.expose(ShowDocumentResult);
     eel.expose(StreamToken);
+    eel.expose(startSpeechRecognition);
+    eel.expose(stopSpeechRecognition);
 }
 
 function formatDocMarkdown(text) {
