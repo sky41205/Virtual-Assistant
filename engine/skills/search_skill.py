@@ -101,9 +101,7 @@ class WebSearchSkill(BaseSkill):
                 "verification_label": verification_label,
                 "domain": urllib.parse.urlparse(source_url).netloc or "duckduckgo.com"
             },
-            requires_confirmation=True,
-            confirmation_action_id=f"open_url:{source_url}",
-            confirmation_prompt=f"Would you like me to open the external source link ({urllib.parse.urlparse(source_url).netloc}) in your browser?"
+            requires_confirmation=False
         )
 
     def confirm(self, action_id: str, context: Optional[Dict[str, Any]] = None) -> SkillResult:

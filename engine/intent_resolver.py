@@ -30,6 +30,41 @@ def set_clipboard_content(text: str) -> bool:
         logger.warning(f"Could not write to clipboard: {e}")
         return False
 
+def is_question(text: str) -> bool:
+    """Accurately identify if a user utterance is an interrogative or knowledge question."""
+    if not text:
+        return False
+    q = text.strip()
+    q_lower = q.lower()
+
+    if q.endswith('?'):
+        return True
+
+    en_question_starters = (
+        'what', 'who', 'where', 'when', 'why', 'how', 'which', 'whose', 'whom',
+        'can you', 'could you', 'would you', 'will you', 'should i', 'can i',
+        'explain', 'describe', 'define', 'tell me', 'teach me', 'summarize',
+        'is it', 'is there', 'are there', 'are you', 'do you', 'does it', 'did ',
+        'difference between', 'meaning of', 'full form of', 'how to', 'how do',
+        'what is', 'what are', 'who is', 'where is', 'why is', 'when did', "what's", "who's", "how's"
+    )
+    for s in en_question_starters:
+        if q_lower.startswith(s) or f" {s} " in f" {q_lower} ":
+            return True
+
+    hi_question_words = [
+        'kya', 'kaun', 'kahan', 'kidhar', 'kab', 'kyun', 'kyu', 'kaisa', 'kaise', 'kaisi',
+        'kitna', 'kitne', 'kitni', 'kisne', 'kisko', 'kiske', 'kise', 'batao', 'bataiye',
+        'samjhao', 'samjhaiye', 'kya hai', 'kaun hai', 'kahan hai', 'kab hai', 'kyun hai',
+        'क्या', 'कौन', 'कहाँ', 'कब', 'क्यों', 'कैसे', 'कैसा', 'कैसी', 'कितना', 'कितने',
+        'किसने', 'किसे', 'किसका', 'बताओ', 'बताइए', 'समझाइए', 'अर्थ'
+    ]
+    for w in hi_question_words:
+        if re.search(rf'\b{re.escape(w)}\b', q_lower) or w in q:
+            return True
+
+    return False
+
 class NaturalIntentResolver:
     """
     Translates free-form conversational spoken queries into structured assistant actions.
@@ -212,6 +247,8 @@ class NaturalIntentResolver:
         app_patterns = ["fire up", "bring up", "switch to", "let's open", "can you open", "zara kholo"]
         for ap in app_patterns:
             if ap in q:
+                if is_question(query) and ap in ["can you open", "let's open"]:
+                    continue
                 app_target = q.replace(ap, "").strip()
                 app_target = re.sub(r'\b(?:please|for me|app|software|program)\b', '', app_target).strip()
                 if app_target:

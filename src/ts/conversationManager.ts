@@ -307,7 +307,9 @@ export class ConversationManager {
         `;
 
         card.querySelector(".btn-replay-speech")?.addEventListener("click", () => {
-            if (window.eel && window.eel.testVoice) {
+            if (window.eel && window.eel.speakText) {
+                window.eel.speakText(msg.text)();
+            } else if (window.eel && window.eel.testVoice) {
                 const voice = (msg.langMode === "hindi_devanagari" || msg.langMode === "hinglish")
                     ? "hi-IN-SwaraNeural"
                     : "en-IN-NeerjaNeural";
@@ -466,8 +468,26 @@ export class ConversationManager {
     private formatAssistantText(text: string): string {
         if (!text) return "";
         let formatted = this.escapeHtml(text);
-        // Replace bold **text**
+
+        // Code blocks: ```lang\ncode\n```
+        formatted = formatted.replace(/```([a-zA-Z0-9_\-\+]*)\n([\s\S]*?)```/g, (_m, lang, code) => {
+            return `<div class="code-snippet-block my-2 p-2 rounded bg-dark border border-secondary border-opacity-25 font-monospace text-light small"><div class="d-flex justify-content-between text-muted small border-bottom border-secondary border-opacity-25 pb-1 mb-1"><span>${lang || 'code'}</span></div><pre class="m-0 overflow-auto" style="max-height: 240px;"><code>${code.trim()}</code></pre></div>`;
+        });
+
+        // Inline code: `code`
+        formatted = formatted.replace(/`([^`]+)`/g, '<code class="bg-dark text-warning px-1 rounded font-monospace small">$1</code>');
+
+        // Headers
+        formatted = formatted.replace(/^### (.*$)/gm, '<h6 class="text-info fw-bold mt-2 mb-1">$1</h6>');
+        formatted = formatted.replace(/^## (.*$)/gm, '<h5 class="text-info fw-bold mt-2 mb-1">$1</h5>');
+
+        // Replace bold **text** and italic
         formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        formatted = formatted.replace(/\*([^\*]+)\*/g, '<em>$1</em>');
+
+        // Numbered lists
+        formatted = formatted.replace(/^(\d+)\.\s+(.*)$/gm, '<div class="ms-3 mb-1"><span class="badge bg-secondary bg-opacity-25 text-info me-1">$1</span> $2</div>');
+
         // Replace bullet points
         formatted = formatted.replace(/\n• (.*?)/g, '<br>&bull; $1');
         formatted = formatted.replace(/\n- (.*?)/g, '<br>&bull; $1');

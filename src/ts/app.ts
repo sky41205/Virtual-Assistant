@@ -348,12 +348,8 @@ export class AssistantApp {
         if (btnReplay) {
             btnReplay.addEventListener("click", () => {
                 if (!this.lastAssistantResponse) return;
-                const lang = detectClientLanguage(this.lastAssistantResponse);
-                if (window.eel && window.eel.testVoice) {
-                    const voice = (lang.mode === "hindi_devanagari" || lang.mode === "hinglish")
-                        ? "hi-IN-SwaraNeural"
-                        : "en-IN-NeerjaNeural";
-                    window.eel.testVoice(voice, lang.mode)();
+                if (window.eel && window.eel.speakText) {
+                    window.eel.speakText(this.lastAssistantResponse)();
                 } else if (window.eel && window.eel.allCommands) {
                     window.eel.allCommands(this.lastAssistantResponse)();
                 }
@@ -361,7 +357,7 @@ export class AssistantApp {
         }
     }
 
-    public displayActiveResponse(text: string, query?: string, langMode?: string, autoSpeak: boolean = true): void {
+    public displayActiveResponse(text: string, query?: string, langMode?: string, autoSpeak: boolean = false): void {
         this.lastAssistantResponse = text;
         const card = document.getElementById("activeResponseCard");
         const queryEcho = document.getElementById("responseQueryEcho");
@@ -392,8 +388,9 @@ export class AssistantApp {
         const orbSummary = text.length > 60 ? text.slice(0, 57) + "…" : text;
         this.setMessageText(orbSummary);
 
-        // Automatically speak answers
-        if (autoSpeak) {
+        // Only speak in browser if Python Eel is not active (pure web standalone demo)
+        const isEelConnected = !!((window as any).eel && (window as any).eel.allCommands);
+        if (autoSpeak && !isEelConnected) {
             this.speechManager.speak(text, langMode);
         }
     }
@@ -406,10 +403,29 @@ export class AssistantApp {
     private formatResponseHTML(text: string): string {
         if (!text) return "";
         let formatted = this.escapeHTML(text);
-        // Bold
+
+        // Code blocks: ```lang\ncode\n```
+        formatted = formatted.replace(/```([a-zA-Z0-9_\-\+]*)\n([\s\S]*?)```/g, (_m, lang, code) => {
+            return `<div class="code-snippet-block my-2 p-2 rounded bg-dark border border-secondary border-opacity-25 font-monospace text-light small"><div class="d-flex justify-content-between text-muted small border-bottom border-secondary border-opacity-25 pb-1 mb-1"><span>${lang || 'code'}</span></div><pre class="m-0 overflow-auto" style="max-height: 240px;"><code>${code.trim()}</code></pre></div>`;
+        });
+
+        // Inline code: `code`
+        formatted = formatted.replace(/`([^`]+)`/g, '<code class="bg-dark text-warning px-1 rounded font-monospace small">$1</code>');
+
+        // Headers
+        formatted = formatted.replace(/^### (.*$)/gm, '<h6 class="text-info fw-bold mt-2 mb-1">$1</h6>');
+        formatted = formatted.replace(/^## (.*$)/gm, '<h5 class="text-info fw-bold mt-2 mb-1">$1</h5>');
+
+        // Bold & Italic
         formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong class="text-info">$1</strong>');
+        formatted = formatted.replace(/\*([^\*]+)\*/g, '<em>$1</em>');
+
         // Bullets
         formatted = formatted.replace(/^[•\-\*]\s+(.*)$/gm, '<li class="ms-3">$1</li>');
+
+        // Numbered lists
+        formatted = formatted.replace(/^(\d+)\.\s+(.*)$/gm, '<div class="ms-3 mb-1"><span class="badge bg-secondary bg-opacity-25 text-info me-1">$1</span> $2</div>');
+
         // Line breaks
         formatted = formatted.replace(/\n\n/g, '<p class="mb-2"></p>');
         formatted = formatted.replace(/\n/g, '<br>');

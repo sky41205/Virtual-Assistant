@@ -213,6 +213,11 @@ def _play_audio_bytes(audio_bytes: bytes, generation: int = None):
         except Exception:
             pass
 
+@eel.expose
+def speakText(text):
+    """Expose TTS speech directly to frontend for replaying assistant responses."""
+    speak(text)
+
 def speak(text, voice_index=None, rate=None, volume=None):
     """
     Non-blocking bilingual voice output — runs TTS synthesis in a daemon thread
@@ -239,9 +244,9 @@ def speak(text, voice_index=None, rate=None, volume=None):
         # Determine language & voice with strict script & phonetic detection
         lang_info = detect_language(text)
         is_hi = lang_info["mode"] in ("hindi_devanagari", "hinglish")
-        from engine.config import TTS_HINDI_VOICE, TTS_ENGLISH_VOICE, VOICE_INDEX, VOICE_RATE, VOICE_VOLUME
+        import engine.config as cfg
         
-        primary_voice = (TTS_HINDI_VOICE or 'hi-IN-SwaraNeural') if is_hi else (TTS_ENGLISH_VOICE or 'en-IN-NeerjaNeural')
+        primary_voice = (cfg.TTS_HINDI_VOICE or 'hi-IN-SwaraNeural') if is_hi else (cfg.TTS_ENGLISH_VOICE or 'en-IN-NeerjaNeural')
         if is_hi:
             secondary_voice = 'hi-IN-MadhurNeural' if primary_voice == 'hi-IN-SwaraNeural' else 'hi-IN-SwaraNeural'
         else:
@@ -251,6 +256,22 @@ def speak(text, voice_index=None, rate=None, volume=None):
         spoken_text = sanitize_speech_text(text, is_hi)
         if not spoken_text:
             return
+
+        # Keep speech output punchy and comfortable (under 300 chars at sentence boundary)
+        if len(spoken_text) > 320:
+            sents = [s.strip() for s in re.split(r'(?<=[.!?।])\s+', spoken_text) if s.strip()]
+            cur_len = 0
+            selected_sents = []
+            for s in sents:
+                if cur_len + len(s) <= 300:
+                    selected_sents.append(s)
+                    cur_len += len(s)
+                else:
+                    break
+            if selected_sents:
+                spoken_text = " ".join(selected_sents)
+            else:
+                spoken_text = spoken_text[:300].rsplit(' ', 1)[0] + "."
 
         speech_rate = "-2%" if is_hi else "+0%"
 
@@ -277,7 +298,6 @@ def speak(text, voice_index=None, rate=None, volume=None):
         if gen != _speech_generation:
             return
         try:
-            from engine.config import VOICE_INDEX, VOICE_RATE, VOICE_VOLUME
             # Check if text contains Devanagari script: SAPI5 on English Windows lacks Hindi phonemes
             if re.search(r'[\u0900-\u097F]', spoken_text):
                 tts_logger.warning("SAPI5 local engine does not support Devanagari script; skipping local fallback.")
@@ -285,12 +305,29 @@ def speak(text, voice_index=None, rate=None, volume=None):
 
             engine = pyttsx3.init()
             voices = engine.getProperty('voices')
-            v_idx = voice_index if voice_index is not None else VOICE_INDEX
-            r = rate if rate is not None else VOICE_RATE
-            vol = volume if volume is not None else VOICE_VOLUME
+            v_idx = voice_index if voice_index is not None else cfg.VOICE_INDEX
+            r = rate if rate is not None else cfg.VOICE_RATE
+            vol = volume if volume is not None else cfg.VOICE_VOLUME
 
             if voices and len(voices) > 0:
-                chosen_idx = max(0, min(int(v_idx), len(voices) - 1))
+                # If female voice requested, map to female SAPI5 voice if available
+                is_female = any(name in primary_voice.lower() for name in ['swara', 'neerja', 'jenny', 'zira', 'female'])
+                chosen_idx = 0
+                if is_female:
+                    for idx, v in enumerate(voices):
+                        if 'zira' in v.name.lower() or 'female' in v.name.lower():
+                            chosen_idx = idx
+                            break
+                    else:
+                        chosen_idx = min(1, len(voices) - 1)
+                else:
+                    for idx, v in enumerate(voices):
+                        if 'david' in v.name.lower() or 'male' in v.name.lower():
+                            chosen_idx = idx
+                            break
+                    else:
+                        chosen_idx = 0
+
                 engine.setProperty('voice', voices[chosen_idx].id)
 
             engine.setProperty('rate', int(r))
@@ -956,36 +993,124 @@ def allCommands(message=1):
         status = "SUCCESS"
         display_text = ""
 
-        # ── FAST PATH: pure conversational queries bypass all skill layers ──────
-        # If the query contains no known action/command keywords, skip 6 handlers
-        # and route directly to the LLM — saves 200-500ms per reply.
-        _ACTION_KEYWORDS = {
-            'open', 'kholo', 'launch', 'start', 'chalao', 'close', 'play', 'bajao',
-            'search', 'find', 'whatsapp', 'call', 'email', 'send', 'volume', 'mute',
-            'screenshot', 'shutdown', 'restart', 'sleep', 'task', 'note', 'remind',
-            'calendar', 'weather', 'time', 'date', 'battery', 'cpu', 'youtube',
-            'analyze', 'summarize', 'document', 'file', 'news', 'calculate', 'convert',
-            'timer', 'alarm', 'dracarys', 'google', 'wikipedia', 'translate',
-        }
-        is_conversational = not any(kw in q_lower for kw in _ACTION_KEYWORDS)
+        # ── QUESTION & FAST-PATH PIPELINE ─────────────────────────────────────────
+        from engine.intent_resolver import is_question
+        query_is_question = is_question(query)
 
-        if is_conversational:
+        if query_is_question:
+            # Check specialized skills that resolve immediately
+            # 1. Math, Equations & Unit Conversions
+            try:
+                from engine.skills.calculator_skill import CalculatorSkill
+                calc_skill = CalculatorSkill()
+                if calc_skill.can_handle(query):
+                    calc_res = calc_skill.execute(query)
+                    if calc_res.handled:
+                        lang_mode = lang_res.get("mode", "english")
+                        speak(calc_res.spoken_response)
+                        log_command_history(query, calc_res.spoken_response, source)
+                        try:
+                            eel.AppendAIBubble(calc_res.display_text, calc_res.card_type, calc_res.card_data, "SUCCESS", lang_mode)
+                        except Exception:
+                            pass
+                        logger.info(f"Calculator resolved question in {round((time.time()-start_time)*1000,1)}ms")
+                        return
+            except Exception as ce:
+                logger.debug(f"Calculator check notice: {ce}")
+
+            # 2. Date & Time
+            try:
+                from engine.skills.datetime_skill import DateTimeSkill
+                dt_skill = DateTimeSkill()
+                if dt_skill.can_handle(query):
+                    dt_res = dt_skill.execute(query)
+                    if dt_res.handled:
+                        lang_mode = lang_res.get("mode", "english")
+                        speak(dt_res.spoken_response)
+                        log_command_history(query, dt_res.spoken_response, source)
+                        try:
+                            eel.AppendAIBubble(dt_res.display_text, dt_res.card_type, dt_res.card_data, "SUCCESS", lang_mode)
+                        except Exception:
+                            pass
+                        logger.info(f"DateTime resolved question in {round((time.time()-start_time)*1000,1)}ms")
+                        return
+            except Exception as dte:
+                logger.debug(f"DateTime check notice: {dte}")
+
+            # 3. Weather & Forecast
+            try:
+                from engine.skills.weather_skill import WeatherSkill
+                w_skill = WeatherSkill()
+                if w_skill.can_handle(query):
+                    w_res = w_skill.execute(query)
+                    if w_res.handled:
+                        lang_mode = lang_res.get("mode", "english")
+                        speak(w_res.spoken_response)
+                        log_command_history(query, w_res.spoken_response, source)
+                        try:
+                            eel.AppendAIBubble(w_res.display_text, w_res.card_type, w_res.card_data, "SUCCESS", lang_mode)
+                        except Exception:
+                            pass
+                        logger.info(f"Weather resolved question in {round((time.time()-start_time)*1000,1)}ms")
+                        return
+            except Exception as we:
+                logger.debug(f"Weather check notice: {we}")
+
+            # 4. News & Headlines
+            try:
+                from engine.skills.news_skill import NewsSkill
+                news_skill = NewsSkill()
+                if news_skill.can_handle(query):
+                    news_res = news_skill.execute(query)
+                    if news_res.handled:
+                        lang_mode = lang_res.get("mode", "english")
+                        speak(news_res.spoken_response)
+                        log_command_history(query, news_res.spoken_response, source)
+                        try:
+                            eel.AppendAIBubble(news_res.display_text, news_res.card_type, news_res.card_data, "SUCCESS", lang_mode)
+                        except Exception:
+                            pass
+                        logger.info(f"News resolved question in {round((time.time()-start_time)*1000,1)}ms")
+                        return
+            except Exception as ne:
+                logger.debug(f"News check notice: {ne}")
+
+            # 5. System Hardware & Telemetry
+            try:
+                from engine.skills.system_skill import SystemInformationSkill
+                sys_skill = SystemInformationSkill()
+                if any(w in q_lower for w in ["battery", "cpu", "ram", "memory", "disk", "uptime", "hardware"]):
+                    sys_res = sys_skill.execute(query)
+                    if sys_res.handled:
+                        lang_mode = lang_res.get("mode", "english")
+                        speak(sys_res.spoken_response)
+                        log_command_history(query, sys_res.spoken_response, source)
+                        try:
+                            eel.AppendAIBubble(sys_res.display_text, sys_res.card_type, sys_res.card_data, "SUCCESS", lang_mode)
+                        except Exception:
+                            pass
+                        logger.info(f"SystemSkill resolved question in {round((time.time()-start_time)*1000,1)}ms")
+                        return
+            except Exception as sye:
+                logger.debug(f"SystemSkill check notice: {sye}")
+
+            # 6. General, Academic, Scientific, Technical, History, Coding & Explanatory Questions
             try:
                 from engine.llm import ask_dracarys
-                fast_response = ask_dracarys(query)
-                if fast_response:
+                ai_response = ask_dracarys(query)
+                if ai_response:
                     lang_mode = lang_res.get("mode", "english")
-                    speak(fast_response)
-                    log_command_history(query, fast_response, source)
+                    speak(ai_response)
+                    log_command_history(query, ai_response, source)
                     try:
-                        eel.AppendAIBubble(fast_response, "chat_response", {}, "SUCCESS", lang_mode)
+                        eel.AppendAIBubble(ai_response, "chat_response", {"source": "ai_brain"}, "SUCCESS", lang_mode)
                     except Exception:
                         pass
-                    logger.info(f"Fast-path LLM response in {round((time.time()-start_time)*1000,1)}ms")
+                    logger.info(f"AI Omni-Brain answered question in {round((time.time()-start_time)*1000,1)}ms")
                     return
-            except Exception as fast_err:
-                logger.warning(f"Fast-path LLM error, falling through to handlers: {fast_err}")
-        # ── END FAST PATH ────────────────────────────────────────────────────────
+            except Exception as q_err:
+                logger.warning(f"Question handling notice: {q_err}")
+        # ── END QUESTION & FAST-PATH PIPELINE ─────────────────────────────────────
 
         # 1. Communication actions (WhatsApp, Phone Call, Contacts, Facebook)
         try:
@@ -1059,7 +1184,7 @@ def allCommands(message=1):
                 logger.error(f"Document analysis error: {de}", exc_info=True)
 
         # 3. Universal Opener (desktop apps, folders, drives, files, settings, websites, browser)
-        if any(w in q_lower for w in ['open', 'kholo', 'launch', 'start', 'chalao', 'खोलो', 'चलाओ']):
+        if not query_is_question and any(w in q_lower for w in ['open', 'kholo', 'launch', 'start', 'chalao', 'खोलो', 'चलाओ']):
             try:
                 from engine.features import openCommand
                 opened_msg = openCommand(query)
@@ -1081,7 +1206,7 @@ def allCommands(message=1):
                 logger.error(f"Universal opener error: {oe}", exc_info=True)
 
         # 4. Media playback on YouTube (English and Hindi)
-        elif any(w in q_lower for w in ['on youtube', 'play', 'bajao', 'gaana', 'song', 'बजाओ', 'सुनाओ', 'laga do']):
+        elif not query_is_question and any(w in q_lower for w in ['on youtube', 'play', 'bajao', 'gaana', 'song', 'बजाओ', 'सुनाओ', 'laga do']):
             try:
                 from engine.features import PlayYoutube
                 yt_msg = PlayYoutube(query)

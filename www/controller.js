@@ -144,7 +144,7 @@ function AppendAIBubble(text, card_type, card_data, status, langMode) {
     if (!text) return true;
     try {
         if (window.assistantApp && window.assistantApp.displayActiveResponse) {
-            window.assistantApp.displayActiveResponse(text, undefined, langMode);
+            window.assistantApp.displayActiveResponse(text, undefined, langMode, false);
         }
         if (window.assistantApp && window.assistantApp.conversationManager) {
             window.assistantApp.conversationManager.addAssistantMessage(text, card_type || "none", card_data || {}, status || "SUCCESS", true, langMode);

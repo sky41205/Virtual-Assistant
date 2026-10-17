@@ -53,12 +53,44 @@ export class VoiceSettingsManager {
             });
         }
 
+        // Auto-save & immediately apply voice and language selections on change
+        const engSelect = document.getElementById("settingEnglishVoice");
+        if (engSelect) {
+            engSelect.addEventListener("change", () => {
+                this.saveSettings(false);
+            });
+        }
+
+        const hindiSelect = document.getElementById("settingHindiVoice");
+        if (hindiSelect) {
+            hindiSelect.addEventListener("change", () => {
+                this.saveSettings(false);
+            });
+        }
+
+        const speechLangSelect = document.getElementById("settingSpeechLang");
+        if (speechLangSelect) {
+            speechLangSelect.addEventListener("change", () => {
+                this.saveSettings(false);
+            });
+        }
+
+        const nameInput = document.getElementById("settingAssistantName");
+        if (nameInput) {
+            nameInput.addEventListener("blur", () => {
+                this.saveSettings(false);
+            });
+        }
+
         // Theme picker buttons
         document.querySelectorAll(".theme-btn").forEach(btn => {
             btn.addEventListener("click", (e) => {
                 const target = e.currentTarget as HTMLElement;
                 const theme = target.getAttribute("data-theme");
-                if (theme) this.applyTheme(theme);
+                if (theme) {
+                    this.applyTheme(theme);
+                    this.saveSettings(false);
+                }
             });
         });
 
@@ -111,7 +143,7 @@ export class VoiceSettingsManager {
         });
     }
 
-    public saveSettings(): void {
+    public saveSettings(shouldCloseDrawer: boolean = true): void {
         const name = (document.getElementById("settingAssistantName") as HTMLInputElement)?.value.trim() || "Dracarys";
         const speechLang = (document.getElementById("settingSpeechLang") as HTMLSelectElement)?.value || "en-IN";
         const hindiVoice = (document.getElementById("settingHindiVoice") as HTMLSelectElement)?.value || "hi-IN-SwaraNeural";
@@ -125,7 +157,9 @@ export class VoiceSettingsManager {
             window.eel.saveAssistantSettings(
                 name, 0, 170, 1.0, this.currentTheme, speechLang, hindiVoice, engVoice
             )(() => {
-                this.closeDrawer();
+                if (shouldCloseDrawer) {
+                    this.closeDrawer();
+                }
             });
         }
     }

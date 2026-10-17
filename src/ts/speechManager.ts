@@ -68,6 +68,14 @@ export class SpeechManager {
 
     public speak(text: string, lang: string = "en-US"): void {
         if (!text || !text.trim()) return;
+
+        // When Python Eel is active, Python's Edge-TTS engine speaks all responses.
+        // Prevent duplicate speech playback from the browser.
+        const isEelConnected = !!((window as any).eel && (window as any).eel.allCommands);
+        if (isEelConnected) {
+            return;
+        }
+
         if (!("speechSynthesis" in window)) return;
 
         const spokenClean = this.cleanTextForSpeech(text);
